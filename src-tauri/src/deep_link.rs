@@ -3,13 +3,19 @@
 //! Deep-link URLs are untrusted OS input. Only `moldavite://plugin/<id>`,
 //! `moldavite://note/<path>` and `moldavite://today` are routed. Plugin ids follow the installer rules;
 //! note paths use the validator for addressing existing visible notes.
+//! `file://` URLs (macOS Open With) and file launch arguments are admitted by
+//! `loose_files`, which decides whether they open as a Forge note or a loose file.
 
 use std::collections::VecDeque;
-use std::sync::Mutex;
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
+use crate::loose_files::{self, Admission, LooseFiles};
 use crate::validation::is_safe_existing_note_path;
 use crate::validation::is_valid_plugin_id;
 
@@ -19,22 +25,56 @@ const NOTE_LINK_PREFIX: &str = "moldavite://note/";
 const TODAY_LINK: &str = "moldavite://today";
 pub(crate) const DEEP_LINK_EVENT: &str = "deep-link-requested";
 const MAX_PENDING_DEEP_LINKS: usize = 64;
+/// macOS can deliver the file a launch was for after the window first drains
+/// the queue, so a file arriving this soon after launch still counts as the
+/// reason the app started.
+const LAUNCH_WINDOW: Duration = Duration::from_secs(5);
+
+static LAUNCHED_AT: OnceLock<Instant> = OnceLock::new();
+static DRAINED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub(crate) enum DeepLinkRequest {
-    Plugin { id: String },
-    Note { path: String },
+    Plugin {
+        id: String,
+    },
+    Note {
+        path: String,
+    },
     Today,
+    #[serde(rename = "loose")]
+    LooseFile {
+        id: String,
+        name: String,
+        #[serde(rename = "dirDisplay")]
+        dir_display: String,
+        #[serde(rename = "atLaunch")]
+        at_launch: bool,
+    },
+}
+
+pub(crate) fn mark_launch() {
+    let _ = LAUNCHED_AT.set(Instant::now());
+}
+
+fn is_launch_delivery() -> bool {
+    !DRAINED.load(Ordering::SeqCst)
+        || LAUNCHED_AT
+            .get()
+            .is_some_and(|launched| launched.elapsed() < LAUNCH_WINDOW)
 }
 
 /// Valid links wait here until the frontend is ready to drain them.
 #[derive(Default)]
-pub(crate) struct PendingDeepLinks(Mutex<VecDeque<DeepLinkRequest>>);
+pub(crate) struct PendingDeepLinks {
+    pending: Mutex<VecDeque<DeepLinkRequest>>,
+    launched_with_file: AtomicBool,
+}
 
 impl PendingDeepLinks {
     fn push(&self, request: DeepLinkRequest) -> Result<(), String> {
-        let mut pending = self.0.lock().map_err(|error| error.to_string())?;
+        let mut pending = self.pending.lock().map_err(|error| error.to_string())?;
         if pending.len() >= MAX_PENDING_DEEP_LINKS {
             pending.pop_front();
         }
@@ -109,6 +149,77 @@ fn request_from_url(url: &str) -> Option<DeepLinkRequest> {
     note_path_from_url(url).map(|path| DeepLinkRequest::Note { path })
 }
 
+fn request_from_path(
+    state: &LooseFiles,
+    path: &std::path::Path,
+    at_launch: bool,
+) -> Result<DeepLinkRequest, String> {
+    Ok(match loose_files::admit(state, path)? {
+        Admission::ForgeNote { rel } => DeepLinkRequest::Note { path: rel },
+        Admission::Loose {
+            id,
+            name,
+            dir_display,
+        } => DeepLinkRequest::LooseFile {
+            id,
+            name,
+            dir_display,
+            at_launch,
+        },
+    })
+}
+
+fn deliver<R: Runtime>(app: &AppHandle<R>, request: DeepLinkRequest) {
+    if let Err(error) = app.state::<PendingDeepLinks>().push(request) {
+        log::warn!("[deep-link] could not queue request: {error}");
+        return;
+    }
+    if let Err(error) = app.emit(DEEP_LINK_EVENT, ()) {
+        // A cold-start WebView may not be listening yet. The queued request
+        // is intentionally retained for `take_pending_deep_links`.
+        log::info!("[deep-link] frontend not ready for event: {error}");
+    }
+}
+
+fn focus_main_window<R: Runtime>(app: &AppHandle<R>) {
+    #[cfg(desktop)]
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+    #[cfg(not(desktop))]
+    let _ = app;
+}
+
+/// Open files the OS handed us (launch arguments, a second launch), then
+/// bring the window forward.
+pub(crate) fn route_paths<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>) {
+    let at_launch = is_launch_delivery();
+    if at_launch && !paths.is_empty() {
+        // File admission runs off-thread and may finish after the first queue drain.
+        app.state::<PendingDeepLinks>()
+            .launched_with_file
+            .store(true, Ordering::SeqCst);
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut delivered = false;
+        for path in paths {
+            match request_from_path(&app.state::<LooseFiles>(), &path, at_launch) {
+                Ok(request) => {
+                    deliver(&app, request);
+                    delivered = true;
+                }
+                Err(reason) => log::info!("[deep-link] ignored file reason={reason}"),
+            }
+        }
+        if delivered {
+            focus_main_window(&app);
+        }
+    });
+}
+
 fn rejected_url_context(url: &str) -> (&'static str, &'static str) {
     if url.starts_with(PLUGIN_LINK_PREFIX) {
         ("plugin", "invalid plugin id or URL shape")
@@ -128,7 +239,7 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
 {
-    let state = app.state::<PendingDeepLinks>();
+    let mut paths = Vec::new();
     for url in urls {
         let url = url.as_ref();
 
@@ -142,29 +253,34 @@ where
             continue;
         }
 
+        if let Some(path) = loose_files::file_url_path(url) {
+            paths.push(path);
+            continue;
+        }
+
         let Some(request) = request_from_url(url) else {
             let (route, reason) = rejected_url_context(url);
             log::info!("[deep-link] ignored URL route={route} reason={reason}");
             continue;
         };
 
-        if let Err(error) = state.push(request) {
-            log::warn!("[deep-link] could not queue request: {error}");
-            continue;
-        }
-
-        if let Err(error) = app.emit(DEEP_LINK_EVENT, ()) {
-            // A cold-start WebView may not be listening yet. The queued request
-            // is intentionally retained for `take_pending_deep_links`.
-            log::info!("[deep-link] frontend not ready for event: {error}");
-        }
+        deliver(app, request);
     }
+    if !paths.is_empty() {
+        route_paths(app, paths);
+    }
+}
+
+#[tauri::command]
+pub(crate) fn was_launched_with_file(state: State<'_, PendingDeepLinks>) -> bool {
+    state.launched_with_file.load(Ordering::SeqCst)
 }
 
 /// Atomically hand all validated requests to the initialized frontend.
 #[tauri::command]
 pub(crate) fn take_pending_deep_links(state: State<'_, PendingDeepLinks>) -> Vec<DeepLinkRequest> {
-    match state.0.lock() {
+    DRAINED.store(true, Ordering::SeqCst);
+    match state.pending.lock() {
         Ok(mut pending) => pending.drain(..).collect(),
         Err(error) => {
             log::warn!("[deep-link] could not drain requests: {error}");
@@ -296,7 +412,137 @@ mod tests {
                 .unwrap();
         }
 
-        assert_eq!(pending.0.lock().unwrap().len(), MAX_PENDING_DEEP_LINKS);
+        assert_eq!(
+            pending.pending.lock().unwrap().len(),
+            MAX_PENDING_DEEP_LINKS
+        );
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn a_file_url_queues_a_loose_file_and_refuses_what_admission_refuses() {
+        use tauri::Manager;
+
+        let app = tauri::test::mock_app();
+        app.manage(PendingDeepLinks::default());
+        app.manage(crate::loose_files::LooseFiles::default());
+        let dir = std::env::temp_dir().join(format!(
+            "moldavite-deep-link-file-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let note = dir.join("Read me.md");
+        std::fs::write(&note, "# Hello").unwrap();
+        std::fs::write(dir.join("notes.txt"), "plain").unwrap();
+        std::fs::write(dir.join("secret.md"), "private").unwrap();
+        let url = |name: &str| {
+            tauri::Url::from_file_path(dir.join(name))
+                .unwrap()
+                .to_string()
+        };
+
+        let secret_url = url("secret.md");
+        assert!(!super::was_launched_with_file(app.state()));
+        super::route_urls(
+            app.handle(),
+            [
+                secret_url.replacen("file:", "moldavite:", 1),
+                secret_url.replacen("file://", "moldavite://localhost", 1),
+                url("Read me.md"),
+                url("notes.txt"),
+            ],
+        );
+        assert!(super::was_launched_with_file(app.state()));
+
+        let pending = app.state::<PendingDeepLinks>();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        while pending.pending.lock().unwrap().is_empty() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "File admission was never delivered"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        let queued: Vec<_> = pending.pending.lock().unwrap().drain(..).collect();
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(queued.len(), 1, "{queued:?}");
+        assert_eq!(
+            app.state::<crate::loose_files::LooseFiles>()
+                .list_open(None)
+                .len(),
+            1
+        );
+        match &queued[0] {
+            DeepLinkRequest::LooseFile { id, name, .. } => {
+                assert_eq!(name, "Read me.md");
+                assert_eq!(id.len(), 32);
+            }
+            other => panic!("expected a loose file, got {other:?}"),
+        }
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn file_urls_are_delivered_in_reported_order() {
+        use tauri::Manager;
+
+        let app = tauri::test::mock_app();
+        app.manage(PendingDeepLinks::default());
+        app.manage(crate::loose_files::LooseFiles::default());
+        let dir = std::env::temp_dir().join(format!(
+            "moldavite-url-order-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let names = ["First.md", "Second.md", "Third.md"];
+        for (index, name) in names.iter().enumerate() {
+            std::fs::write(
+                dir.join(name),
+                if index == 0 {
+                    "a".repeat(9_000_000)
+                } else {
+                    "small".to_string()
+                },
+            )
+            .unwrap();
+        }
+        super::route_urls(
+            app.handle(),
+            names.map(|name| {
+                tauri::Url::from_file_path(dir.join(name))
+                    .unwrap()
+                    .to_string()
+            }),
+        );
+        let pending = app.state::<PendingDeepLinks>();
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while pending.pending.lock().unwrap().len() < names.len() {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "File admission was never delivered"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        let queued: Vec<_> = pending
+            .pending
+            .lock()
+            .unwrap()
+            .drain(..)
+            .map(|request| match request {
+                DeepLinkRequest::LooseFile { name, .. } => name,
+                other => panic!("expected a loose file, got {other:?}"),
+            })
+            .collect();
+        std::fs::remove_dir_all(&dir).ok();
+        assert_eq!(queued, names);
     }
 
     #[test]

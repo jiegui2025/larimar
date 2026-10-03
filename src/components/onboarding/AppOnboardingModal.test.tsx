@@ -4,6 +4,8 @@ import { AppOnboardingModal, APP_ONBOARDING_VERSION } from './AppOnboardingModal
 import { isMobilePlatform } from '@/lib/platform';
 import { open as openDirDialog } from '@tauri-apps/plugin-dialog';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { invoke } from '@tauri-apps/api/core';
+import { useLaunchContextStore } from '@/lib/launchContext';
 
 // The Forge dir picker plugin isn't available in jsdom — stub it.
 vi.mock('@tauri-apps/plugin-dialog', () => ({
@@ -16,6 +18,8 @@ describe('AppOnboardingModal', () => {
   beforeEach(() => {
     vi.mocked(isMobilePlatform).mockReturnValue(false);
     vi.mocked(openDirDialog).mockClear();
+    vi.mocked(invoke).mockReset();
+    useLaunchContextStore.setState({ ready: true, launchedWithFile: false });
     // Reset to a known first-run state before each test.
     act(() => {
       useSettingsStore.getState().setHasSeenAppOnboarding(false);
@@ -48,7 +52,7 @@ describe('AppOnboardingModal', () => {
     expect(screen.getByRole('heading', { name: /pick your forge/i })).toBeInTheDocument();
   });
 
-  it('walks the full flow (tour + AI pages) and closes via Get started', () => {
+  it('walks the full flow and closes after the release pages', () => {
     render(<AppOnboardingModal />);
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
@@ -62,7 +66,9 @@ describe('AppOnboardingModal', () => {
       screen.getByRole('heading', { name: /semantic search, fully offline/i })
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /get started/i }));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep my theme' }));
     expect(useSettingsStore.getState().hasSeenAppOnboarding).toBe(true);
     expect(useSettingsStore.getState().lastSeenOnboardingVersion).toBe(APP_ONBOARDING_VERSION);
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -73,7 +79,8 @@ describe('AppOnboardingModal', () => {
     render(<AppOnboardingModal />);
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
-    fireEvent.click(screen.getByRole('button', { name: /get started/i }));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep my theme' }));
     expect(screen.queryByRole('dialog')).toBeNull();
 
     act(() => useSettingsStore.getState().setHasSeenAppOnboarding(false));
@@ -91,7 +98,8 @@ describe('AppOnboardingModal', () => {
     expect(
       screen.getByText('Tap Index in the rail for notes, folders, and tags.')
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /get started/i }));
+    fireEvent.click(screen.getByRole('button', { name: /next/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep my theme' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(openDirDialog).not.toHaveBeenCalled();
     expect(useSettingsStore.getState().hasSeenAppOnboarding).toBe(true);
@@ -139,7 +147,8 @@ describe('AppOnboardingModal', () => {
     vi.mocked(isMobilePlatform).mockReturnValue(true);
     useSettingsStore.setState({ hasSeenAppOnboarding: true, lastSeenOnboardingVersion: 0 });
     render(<AppOnboardingModal />);
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Autumn is here' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /built for ai agents/i })).toBeNull();
   });
 
   describe('feature-update flow for existing users', () => {
@@ -151,7 +160,7 @@ describe('AppOnboardingModal', () => {
       });
     });
 
-    it('shows only the new AI pages, starting on the agents page', () => {
+    it('starts with the unseen AI pages', () => {
       render(<AppOnboardingModal />);
       expect(
         screen.getByRole('heading', { name: /new: built for ai agents/i })
@@ -204,14 +213,16 @@ describe('AppOnboardingModal', () => {
       getItem.mockRestore();
     });
 
-    it('finishes with Done and records the seen version without re-running onboarding', () => {
+    it('records the seen version without re-running onboarding', () => {
       render(<AppOnboardingModal />);
       fireEvent.click(screen.getByRole('button', { name: /next/i }));
       expect(
         screen.getByRole('heading', { name: /semantic search, fully offline/i })
       ).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: /done/i }));
+      fireEvent.click(screen.getByRole('button', { name: /next/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Keep my theme' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
       expect(useSettingsStore.getState().lastSeenOnboardingVersion).toBe(APP_ONBOARDING_VERSION);
       expect(useSettingsStore.getState().hasSeenAppOnboarding).toBe(true);
       expect(screen.queryByRole('dialog')).toBeNull();
@@ -224,15 +235,60 @@ describe('AppOnboardingModal', () => {
       render(<AppOnboardingModal />);
       expect(screen.queryByRole('dialog')).toBeNull();
     });
+  });
 
-    it('Open Settings on the final page opens the settings modal and closes onboarding', () => {
+  describe('the inline default Markdown app action', () => {
+    beforeEach(() => {
+      useSettingsStore.setState({ hasSeenAppOnboarding: true, lastSeenOnboardingVersion: 2 });
+      vi.mocked(invoke).mockImplementation(async (command) => {
+        if (command === 'default_markdown_app_status') return { mode: 'set', isDefault: false };
+        if (command === 'make_default_markdown_app') return { mode: 'set', isDefault: true };
+        return undefined;
+      });
+    });
+
+    async function openFilesPage() {
       render(<AppOnboardingModal />);
-      fireEvent.click(screen.getByRole('button', { name: /next/i }));
-      fireEvent.click(screen.getByRole('button', { name: /open settings/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Keep my theme' }));
+      await act(async () => {});
+    }
 
-      expect(useSettingsStore.getState().isSettingsOpen).toBe(true);
+    it('makes Moldavite the default and records the version', async () => {
+      await openFilesPage();
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
+      });
+      expect(invoke).toHaveBeenCalledWith('make_default_markdown_app', undefined);
       expect(useSettingsStore.getState().lastSeenOnboardingVersion).toBe(APP_ONBOARDING_VERSION);
       expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('Continue closes without changing the default', async () => {
+      await openFilesPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      expect(invoke).not.toHaveBeenCalledWith('make_default_markdown_app', undefined);
+      expect(useSettingsStore.getState().lastSeenOnboardingVersion).toBe(APP_ONBOARDING_VERSION);
+    });
+
+    it('offers Default Apps settings on Windows', async () => {
+      vi.mocked(invoke).mockResolvedValue({ mode: 'open-settings', isDefault: null });
+      await openFilesPage();
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Open Default Apps settings' }));
+      });
+      expect(invoke).toHaveBeenCalledWith('make_default_markdown_app', undefined);
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('keeps the page open and reports a failed default-app change', async () => {
+      await openFilesPage();
+      vi.mocked(invoke).mockRejectedValueOnce(new Error('Could not change the default'));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
+      });
+      expect(screen.getByText('Could not change the default')).toBeInTheDocument();
+      expect(useSettingsStore.getState().lastSeenOnboardingVersion).toBe(2);
+      expect(screen.getByRole('button', { name: 'Make default' })).toBeEnabled();
     });
   });
 });

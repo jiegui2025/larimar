@@ -26,6 +26,28 @@ import {
   toForgeImageSrc,
 } from './forgeImages';
 
+/**
+ * Off while converting a loose note, a file outside the Forge: its `images/x`
+ * would otherwise be read and rewritten as the open Forge's image. Conversion
+ * is synchronous, so a module flag set around one call cannot leak into another.
+ */
+let forgeImagesEnabled = true;
+
+export interface ConversionOptions {
+  forgeImages?: boolean;
+}
+
+function convertWith<T>(options: ConversionOptions | undefined, convert: () => T): T {
+  if (options?.forgeImages !== false) return convert();
+  const previous = forgeImagesEnabled;
+  forgeImagesEnabled = false;
+  try {
+    return convert();
+  } finally {
+    forgeImagesEnabled = previous;
+  }
+}
+
 const turndownService = new TurndownService({
   headingStyle: 'atx',
   hr: '---',
@@ -160,6 +182,26 @@ turndownService.addRule('taskList', {
   },
 });
 
+// Turndown's default writes "-   item" and "1.  item"; other editors and
+// CommonMark examples use one space after the marker, so outside files keep
+// their lists when saved.
+turndownService.addRule('listItem', {
+  filter: (node) => node.nodeName === 'LI' && node.getAttribute('data-type') !== 'taskItem',
+  replacement: function (content, node, options) {
+    const parent = node.parentNode as HTMLElement | null;
+    let prefix = `${options.bulletListMarker} `;
+    if (parent?.nodeName === 'OL') {
+      const start = Number(parent.getAttribute('start') ?? 1);
+      const index = Array.prototype.indexOf.call(parent.children, node);
+      prefix = `${start + index}. `;
+    }
+    const indent = ' '.repeat(prefix.length);
+    const body = content.replace(/^\n+/, '').replace(/\n+$/, '\n').replace(/\n/gm, `\n${indent}`);
+    const trailer = node.nextSibling && !/\n$/.test(body) ? '\n' : '';
+    return prefix + body + trailer;
+  },
+});
+
 /**
  * Attribute values are written into a raw `<img>` tag, so an unescaped quote in
  * an alt text closes the attribute early. markdown-it then fails to recognise
@@ -179,7 +221,7 @@ turndownService.addRule('image', {
   replacement: function (_content, node) {
     const element = node as HTMLElement;
     const rawSrc = element.getAttribute('src') || '';
-    const src = toForgeImageSrc(rawSrc) ?? rawSrc;
+    const src = (forgeImagesEnabled ? toForgeImageSrc(rawSrc) : null) ?? rawSrc;
     const alt = element.getAttribute('alt') || '';
     const width = element.getAttribute('width');
     const alignment = element.getAttribute('data-alignment');
@@ -285,6 +327,46 @@ md.use(markdownItTaskLists, {
   label: false,
 });
 
+/** Compare Markdown structure while preserving code and joining soft-wrapped prose. */
+export function markdownForComparison(markdown: string): string {
+  const source = markdown.replace(/\r\n/g, '\n');
+  const tokens = md.parse(source, {});
+  return JSON.stringify(
+    tokens.map((token) => {
+      const children: unknown[] = [];
+      for (const child of token.children ?? []) {
+        if (child.type === 'text' || child.type === 'softbreak') {
+          const text = child.type === 'softbreak' ? ' ' : child.content.replace(/[ \t]+/g, ' ');
+          const previous = children[children.length - 1];
+          if (typeof previous === 'string') children[children.length - 1] = previous + text;
+          else children.push(text);
+        } else {
+          children.push([
+            child.type,
+            child.content,
+            child.attrs,
+            child.type === 'code_inline' ? child.markup : null,
+          ]);
+        }
+      }
+      if (token.type === 'table_open' && token.map) {
+        return source
+          .split('\n')
+          .slice(...token.map)
+          .map((line) => line.trimEnd());
+      }
+      return [
+        token.type,
+        token.nesting,
+        token.attrs,
+        token.info,
+        token.type === 'fence' ? token.markup : null,
+        token.type === 'inline' ? children : token.content,
+      ];
+    })
+  );
+}
+
 // Allow only tags and attributes needed for note content
 const DOMPURIFY_CONFIG = {
   ALLOWED_TAGS: [
@@ -379,7 +461,8 @@ const DOMPURIFY_CONFIG = {
 
 DOMPurify.addHook('uponSanitizeAttribute', (node, data) => {
   if (data.attrName === 'src' && data.attrValue) {
-    const forgeImage = node.nodeName === 'IMG' ? toForgeImageSrc(data.attrValue) : null;
+    const forgeImage =
+      forgeImagesEnabled && node.nodeName === 'IMG' ? toForgeImageSrc(data.attrValue) : null;
     if (forgeImage) {
       // Not force-kept: DOMPurify skips writing a rewritten value back when it is.
       data.attrValue = forgeImage;
@@ -443,9 +526,9 @@ export function noteNameToFilename(noteName: string): string {
  * @param html - The HTML content to convert
  * @returns Markdown representation
  */
-export function htmlToMarkdown(html: string): string {
+export function htmlToMarkdown(html: string, options?: ConversionOptions): string {
   if (!html || html.trim() === '') return '';
-  return turndownService.turndown(html);
+  return convertWith(options, () => turndownService.turndown(html));
 }
 
 /**
@@ -629,9 +712,12 @@ function padRaggedTables(markdown: string): string {
  * @param markdown - The Markdown content to convert
  * @returns Sanitized HTML representation with wiki links and task lists processed
  */
-export function markdownToHtml(markdown: string): string {
+export function markdownToHtml(markdown: string, options?: ConversionOptions): string {
   if (!markdown || markdown.trim() === '') return '';
+  return convertWith(options, () => renderMarkdown(markdown));
+}
 
+function renderMarkdown(markdown: string): string {
   let processed = markdown;
 
   // Convert [[Note Name]] or [[Display Text|Note Name]] to wiki-link HTML
@@ -736,10 +822,10 @@ export function isHtmlContent(content: string): boolean {
  * @param content - The raw note content read from disk
  * @returns Sanitized HTML safe to hand to the editor
  */
-export function noteContentToEditorHtml(content: string): string {
+export function noteContentToEditorHtml(content: string, options?: ConversionOptions): string {
   return isHtmlContent(content)
-    ? DOMPurify.sanitize(content, DOMPURIFY_CONFIG)
-    : markdownToHtml(content);
+    ? convertWith(options, () => DOMPurify.sanitize(content, DOMPURIFY_CONFIG))
+    : markdownToHtml(content, options);
 }
 
 export async function ensureDirectories(): Promise<void> {

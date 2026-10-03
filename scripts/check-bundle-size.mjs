@@ -159,7 +159,21 @@ const BUDGETS = [
 // permission changes, installing from a .zip or folder, safe mode with its
 // startup marker, starting and stopping one plugin instead of all) adds
 // 11.4 KB raw / 3.4 KB gz. Measured 673.0 KB / 193.1 KB gz.
-const APP_JS_BUDGET = { rawKb: 676, gzipKb: 195 };
+// 680 / 197: the Autumn round (the seasonal preset, falling leaves, the Settings
+// pumpkin and the Index icons) adds 4.7 KB raw / 1.8 KB gz.
+// Measured 677.7 KB / 194.9 KB gz.
+// 686 / 198: Markdown files opened from outside the Forge (the loose-file IPC
+// layer and fidelity check, the on-disk change banner, the guards across
+// autosave, menus and plugins, ⌘O) and the window drop guard add 10.1 KB raw /
+// 3.1 KB gz. Measured 683.1 KB / 196.2 KB gz.
+// 694 / 200: those two together with the default Markdown app prompt (the
+// Settings row and the onboarding step). Measured 691.9 KB / 198.9 KB gz.
+// 698 / 202: dropped Markdown files (the per-platform drop route, the read-only
+// fallback tab and its banner) add 3.1 KB raw / 1.2 KB gz. Measured 695.0 KB /
+// 200.1 KB gz.
+// 700 / 202: the release welcome pages and shared launch decision.
+// Measured 698.7 KB raw / 201.3 KB gz; no new dependencies.
+const APP_JS_BUDGET = { rawKb: 700, gzipKb: 202 };
 
 async function main() {
   let entries;

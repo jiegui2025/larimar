@@ -2,6 +2,22 @@
 
 All notable changes to Moldavite are documented here.
 
+## [2.10.0] - Unreleased
+
+### Added
+
+- **Open any Markdown file with Moldavite.** Choose Moldavite in Finder's Open With, double-click a `.md` file once Moldavite is its app, drop it on the Moldavite window, or press ⌘O (Ctrl+O) or use **Open File…** in the Quick Switcher. When its location is available, the file opens in its own tab and saves back to the same file, wherever it lives; it is not copied into your Forge. A file inside your Forge opens as that note instead. The tab says **Not in Forge** and shows where the file is, and its More menu can show it in Finder, add a copy to your Forge, save a copy or export a PDF.
+- A file Moldavite cannot save, or whose formatting the editor would change (raw HTML or anything else the editor cannot hold as written), opens view-only and says why. **Edit anyway** lets you edit a file the editor would reformat. Nothing is written until you type.
+- If the file changes on disk while it is open, Moldavite stops saving it and asks: **Reload**, **Keep mine** or **Save a copy…**. It never writes a conflict copy into the file's folder.
+- **Make Moldavite your Markdown app.** Settings → General shows whether Moldavite opens `.md` files and has a **Make default** button on Mac and Linux. Windows does not let an app set this itself, so there the button opens Default Apps settings. Existing users see the option once in a short welcome to this release, unless Moldavite is already the default.
+- **Autumn.** A new Autumn theme in Settings → Appearance, light and dark: a golden wheat ground with maple, cranberry and olive in notes. With it on, selected text, the typing cursor and ticked to-dos turn maple, divider lines carry a tiny leaf, and the Index shows small icons beside Notes, Folders, Daily and Tags. With any theme, a few leaves drift across the home screen, a small pumpkin sits in the corner of Settings, and About says it's the Autumn edition. Turn the seasonal bits off in Settings → Layout → Seasonal touches.
+
+### Fixed
+
+- Opening a Markdown file to launch Moldavite defers onboarding and release welcome pages until the next normal launch, leaving the file visible.
+- Closing a file opened outside the Forge keeps its tab and edits when saving fails, including when the file changed on disk or was moved.
+- **Dropped Markdown files open editable** and save to the original file when Moldavite can recover their location. Otherwise they open read-only with **Add to Forge**. Other dropped files are ignored, and window drops no longer navigate away from the app.
+
 ## [2.9.1] - 2026-09-28
 
 ### Added

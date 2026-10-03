@@ -116,6 +116,12 @@ Real Markdown with YAML frontmatter. Point Dropbox, iCloud, git or nothing at
 all at it. Edit the files in another editor while Moldavite is open and it
 notices.
 
+Open Markdown outside a Forge with Open With, a file association, a window drop,
+or ⌘O (Ctrl+O). Editable files save where they are; **Add to Forge** creates a
+Forge copy, and files whose formatting cannot survive an edit open view-only.
+A drop whose location cannot be recovered opens read-only with **Add to Forge**;
+use Open With or ⌘O (Ctrl+O) to edit the original.
+
 ### Start syncing on Mac
 
 In Moldavite 2.7.0 or later, open **Settings → General → Use synced Forge** to
@@ -130,8 +136,8 @@ and troubleshooting. The full iOS guide will follow separately.
 
 ## What else it does
 
-Settings → Appearance offers six themes, Cream, Sage, Slate, Clay, Plum and
-Graphite, each in light and dark, and S–XL text sizes for the editor and
+Settings → Appearance offers seven themes, Cream, Sage, Slate, Clay, Plum,
+Graphite and the seasonal Autumn, each in light and dark, and S–XL text sizes for the editor and
 desktop Settings. Settings → Layout puts the icon rail on the left or the right.
 
 Wiki-links with vault-wide rename, backlinks, a graph view, tags, templates,
@@ -147,6 +153,10 @@ Keyword search answers from a local SQLite index kept outside the Forge, so it
 stays instant as a Forge grows. Local semantic search is opt-in, downloads its
 model once and then runs offline; it ships on Apple Silicon Macs, Windows and
 Linux, and Intel Macs keep the keyword search.
+
+Settings → General can make Moldavite the app that opens a double-clicked
+`.md` file (on Windows it opens Default Apps settings, since Windows leaves that
+choice to you).
 
 Updates are checked quietly in the background, verified against a signing key
 before they install, and a "What's New" window shows that version's notes the

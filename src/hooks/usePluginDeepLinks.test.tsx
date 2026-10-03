@@ -9,6 +9,8 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { useTimelineStore } from '@/stores/timelineStore';
 import { useToastStore } from '@/stores/toastStore';
 import type { Note, NoteFile } from '@/types';
+import { useLaunchContextStore, wasLaunchedWithFile } from '@/lib/launchContext';
+import { installWindowDropGuard } from '@/lib/dropGuard';
 
 const invokeMock = vi.fn();
 const listenMock = vi.fn();
@@ -51,6 +53,7 @@ const folderedNote: NoteFile = {
 
 beforeEach(() => {
   localStorage.clear();
+  useLaunchContextStore.setState({ ready: false, launchedWithFile: false });
   eventHandler = undefined;
   pendingRequests = [];
   listedNotes = [rootNote, folderedNote];
@@ -61,6 +64,25 @@ beforeEach(() => {
       return requests;
     }
     if (command === 'list_notes') return listedNotes;
+    if (command === 'admit_dropped_files') {
+      return [
+        {
+          kind: 'loose',
+          id: '0123456789abcdef0123456789abcdef',
+          name: 'Read me.md',
+          dirDisplay: '~',
+        },
+      ];
+    }
+    if (command === 'read_loose_file') {
+      return {
+        body: 'Opened from Finder',
+        hash: 'loose-hash',
+        readOnly: false,
+        name: 'Read me.md',
+        dirDisplay: '~/Desktop',
+      };
+    }
     if (command === 'read_note') {
       return { content: '# Opened note', color: null, contentHash: 'content-hash' };
     }
@@ -142,7 +164,7 @@ describe('app deep links', () => {
     act(() => eventHandler?.());
 
     await waitFor(() => expect(useNoteStore.getState().currentNote?.id).toBe(rootNote.path));
-    expect(invokeMock).toHaveBeenLastCalledWith('read_note', {
+    expect(invokeMock).toHaveBeenCalledWith('read_note', {
       filename: 'Root note.md',
       isDaily: false,
       isWeekly: false,
@@ -186,6 +208,78 @@ describe('app deep links', () => {
       expect(usePluginInstallStore.getState().pending?.id).toBe('publish-wordpress')
     );
     expect(useSettingsStore.getState().activeSettingsTab).toBe('plugins');
+  });
+
+  it('opens a file the OS handed over as a loose tab, never a Forge note', async () => {
+    const id = '0123456789abcdef0123456789abcdef';
+    pendingRequests = [
+      { kind: 'loose', id, name: 'Read me.md', dirDisplay: '~/Desktop', atLaunch: true },
+      { kind: 'loose', id: '../../etc/passwd', name: 'x', dirDisplay: '/' },
+    ];
+
+    renderHook(() => usePluginDeepLinks());
+
+    await waitFor(() => expect(useNoteStore.getState().currentNote?.id).toBe(`loose:${id}`));
+    expect(useNoteStore.getState().openTabs).toHaveLength(1);
+    expect(useNoteStore.getState().currentNote?.loose).toMatchObject({
+      looseId: id,
+      name: 'Read me.md',
+      dir: '~/Desktop',
+    });
+    expect(invokeMock).toHaveBeenCalledWith('read_loose_file', { id });
+    expect(invokeMock).not.toHaveBeenCalledWith('read_note', expect.anything());
+    expect(wasLaunchedWithFile()).toBe(true);
+    await waitFor(() => expect(useLaunchContextStore.getState().ready).toBe(true));
+  });
+
+  it('waits for the initial drain before deciding whether welcome pages can open', async () => {
+    let finishDrain: ((requests: unknown[]) => void) | undefined;
+    const delayedDrain = new Promise<unknown[]>((resolve) => {
+      finishDrain = resolve;
+    });
+    const invoke = invokeMock.getMockImplementation();
+    invokeMock.mockImplementation((command: string, ...args: unknown[]) =>
+      command === 'take_pending_deep_links' ? delayedDrain : invoke?.(command, ...args)
+    );
+    renderHook(() => usePluginDeepLinks());
+    await waitFor(() => expect(invokeMock).toHaveBeenCalledWith('take_pending_deep_links'));
+    expect(useLaunchContextStore.getState().ready).toBe(false);
+    await act(async () => finishDrain?.([]));
+    expect(useLaunchContextStore.getState().ready).toBe(true);
+    expect(wasLaunchedWithFile()).toBe(false);
+  });
+
+  it('uses Rust launch knowledge when file admission has not reached the queue yet', async () => {
+    invokeMock.mockImplementation(async (command: string) =>
+      command === 'was_launched_with_file' ? true : []
+    );
+    renderHook(() => usePluginDeepLinks());
+    await waitFor(() => expect(useLaunchContextStore.getState().ready).toBe(true));
+    expect(invokeMock).toHaveBeenCalledWith('was_launched_with_file');
+    expect(wasLaunchedWithFile()).toBe(true);
+    expect(useNoteStore.getState().openTabs).toHaveLength(0);
+  });
+
+  it('opens a Markdown file dropped on the window through Rust, as a loose tab', async () => {
+    const uninstall = installWindowDropGuard();
+    const { unmount } = renderHook(() => usePluginDeepLinks());
+    const file = new File(['# Hi'], 'Read me.md', { type: 'text/markdown' });
+    const drop = new Event('drop', { bubbles: true, cancelable: true }) as DragEvent;
+    Object.defineProperty(drop, 'dataTransfer', {
+      value: { types: ['Files'], files: [file], getData: () => '' },
+    });
+
+    document.body.dispatchEvent(drop);
+
+    await waitFor(() =>
+      expect(useNoteStore.getState().currentNote?.id).toBe('loose:0123456789abcdef0123456789abcdef')
+    );
+    expect(invokeMock).toHaveBeenCalledWith(
+      'admit_dropped_files',
+      expect.objectContaining({ candidates: [expect.objectContaining({ name: 'Read me.md' })] })
+    );
+    unmount();
+    uninstall();
   });
 
   it('rejects malformed frontend payloads defensively', async () => {

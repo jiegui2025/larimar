@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { safeInvoke } from '@/lib/ipc';
 import { whenForgeReady } from '@/lib/forgeReadiness';
+import { markLaunchedWithFile, useLaunchContextStore } from '@/lib/launchContext';
 import { useGraphStore } from '@/stores/graphStore';
 import { usePluginInstallStore } from '@/stores/pluginInstallStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -12,11 +13,15 @@ import { useTimelineStore } from '@/stores/timelineStore';
 import { useNoteStore } from '@/stores/noteStore';
 import { useToastStore } from '@/stores/toastStore';
 import { useNotes } from './useNotes';
+import { openLooseFile } from '@/lib/looseFiles';
+import { openDroppedFiles } from '@/lib/droppedFiles';
+import { setWindowFileDropHandler } from '@/lib/dropGuard';
 import type { Note, NoteFile } from '@/types';
 
 export const DEEP_LINK_EVENT = 'deep-link-requested';
 const PLUGIN_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const DRIVE_PREFIX_RE = /^[a-z]:/i;
+const LOOSE_ID_RE = /^[0-9a-f]{32}$/;
 
 interface PluginDeepLinkRequest {
   kind: 'plugin';
@@ -33,7 +38,20 @@ interface TodayDeepLinkRequest {
   kind: 'today';
 }
 
-type DeepLinkRequest = PluginDeepLinkRequest | NoteDeepLinkRequest | TodayDeepLinkRequest;
+/** A Markdown file the OS opened with the app, admitted by Rust under a session id. */
+interface LooseDeepLinkRequest {
+  kind: 'loose';
+  id: string;
+  name: string;
+  dirDisplay: string;
+  atLaunch?: boolean;
+}
+
+type DeepLinkRequest =
+  | PluginDeepLinkRequest
+  | NoteDeepLinkRequest
+  | TodayDeepLinkRequest
+  | LooseDeepLinkRequest;
 type LoadDailyNote = (date: Date) => Promise<void>;
 type LoadNote = (note: NoteFile, inNewTab?: boolean) => Promise<void>;
 type RefreshNotes = () => Promise<void>;
@@ -152,13 +170,22 @@ function isDeepLinkRequest(value: unknown): value is DeepLinkRequest {
   if (request.kind === 'plugin') {
     return typeof request.id === 'string' && PLUGIN_ID_RE.test(request.id);
   }
+  if (request.kind === 'loose') {
+    return (
+      typeof request.id === 'string' &&
+      LOOSE_ID_RE.test(request.id) &&
+      typeof request.name === 'string' &&
+      typeof request.dirDisplay === 'string'
+    );
+  }
   return request.kind === 'note' && isSafeNoteReference(request.path);
 }
 
 /**
  * Subscribe before draining so a URL arriving during startup cannot be lost.
  * The Rust queue is also the payload source for live events, avoiding separate
- * cold/running routing paths.
+ * cold/running routing paths. Markdown files dropped on the window open through
+ * the same note routing.
  */
 export function usePluginDeepLinks() {
   const { loadNote, refresh, loadDailyNote } = useNotes();
@@ -166,8 +193,9 @@ export function usePluginDeepLinks() {
   useEffect(() => {
     let disposed = false;
     let unlisten: UnlistenFn | undefined;
+    let draining = Promise.resolve();
 
-    const drain = async () => {
+    const drainPending = async () => {
       try {
         await whenForgeReady();
         const pending = await safeInvoke<unknown>('take_pending_deep_links');
@@ -178,13 +206,24 @@ export function usePluginDeepLinks() {
             routePluginInstallRequest(request.id);
           } else if (request.kind === 'today') {
             await routeTodayRequest(loadDailyNote);
+          } else if (request.kind === 'loose') {
+            useSettingsStore.getState().setIsSettingsOpen(false);
+            await openLooseFile(request, { atLaunch: request.atLaunch === true });
           } else {
             await routeNoteRequest(request.path, loadNote, refresh);
           }
         }
+        if (await safeInvoke<boolean>('was_launched_with_file')) markLaunchedWithFile();
       } catch (error) {
         console.error('[deep-link] could not read pending requests:', error);
+      } finally {
+        if (!disposed) useLaunchContextStore.setState({ ready: true });
       }
+    };
+
+    const drain = () => {
+      draining = draining.then(drainPending);
+      return draining;
     };
 
     const initialize = async () => {
@@ -205,4 +244,12 @@ export function usePluginDeepLinks() {
       unlisten?.();
     };
   }, [loadDailyNote, loadNote, refresh]);
+
+  useEffect(
+    () =>
+      setWindowFileDropHandler((files, event) => {
+        void openDroppedFiles(files, event, (rel) => routeNoteRequest(rel, loadNote, refresh));
+      }),
+    [loadNote, refresh]
+  );
 }
