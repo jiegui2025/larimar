@@ -181,6 +181,15 @@
   --radius-3xl: 0;
   --radius-4xl: 0;
 
+  /* CONTROL PADDING
+     Room between a control's hover or active fill and its letters. The fill
+     itself is --hover-overlay and --active-overlay, painted on every button
+     by INTERACTION FILLS. A text control takes --control-pad-*; a list row
+     whose fill spans the row takes --row-pad-x at each side. */
+  --control-pad-y: 3px;
+  --control-pad-x: 6px;
+  --row-pad-x: 8px;
+
   /* MOTION */
   --dur-micro: 120ms;
   --dur-press: 90ms;
@@ -1510,19 +1519,6 @@ html:not([data-platform='mobile'])
   background: var(--hover-overlay) !important;
 }
 
-.settings-close {
-  min-width: 28px;
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 300;
-  line-height: 1;
-}
-
-.settings-close:hover {
-  color: var(--text-primary) !important;
-  background: var(--hover-overlay) !important;
-}
-
 .settings-dialog [role='tabpanel'] > div {
   color: var(--text-secondary);
 }
@@ -1992,22 +1988,51 @@ html:not([data-platform='mobile'])
   pointer-events: auto;
 }
 
-.note-corner-button {
+/* The close control everywhere (CloseButton) shares the corner's look: a
+   16px hairline × in a 28px square that takes the hover fill. */
+:is(.note-corner-button, .close-button) {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
+  padding: 0;
   color: var(--text-muted);
   transition:
     color var(--dur-micro) var(--ease-standard),
     background-color var(--dur-micro) var(--ease-standard);
 }
 
-.note-corner-button:hover,
-.note-corner-button:focus-visible {
+:is(.note-corner-button, .close-button):hover {
   color: var(--text-primary);
   background: var(--hover-overlay);
+}
+
+/* Surfaces hand the × focus as they open; the ring alone marks it, so a
+   dialog opened from the keyboard does not show a filled box at rest. */
+:is(.note-corner-button, .close-button):focus-visible {
+  color: var(--text-primary);
+}
+
+.close-button-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* A small dialog's title row: the title, then the × at the top-right, its
+   glyph lined up with the content edge. */
+.dialog-head {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dialog-head > .close-button {
+  margin: -2px -6px 0 0;
 }
 
 .note-corner-button[data-on] {
@@ -2841,16 +2866,6 @@ wiki-link {
   position: absolute;
   top: 0;
   right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  color: var(--text-muted);
-  font-family: var(--font-display);
-  font-size: 24px;
-  line-height: 1;
-  background: transparent;
 }
 
 .wn-section {
@@ -2888,8 +2903,9 @@ wiki-link {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
-  padding: 1rem 0;
+  width: calc(100% + 2 * var(--row-pad-x));
+  margin-inline: calc(-1 * var(--row-pad-x));
+  padding: 1rem var(--row-pad-x);
   text-align: left;
   background: transparent;
 }
@@ -2935,8 +2951,6 @@ button[aria-expanded='true'] .wn-caret {
   color: var(--text-secondary);
   font-size: var(--text-sm);
   text-align: left;
-  text-decoration: underline;
-  text-underline-offset: 3px;
   background: transparent;
 }
 
@@ -3685,7 +3699,8 @@ button[aria-expanded='true'] .wn-caret {
   align-items: center;
   justify-content: space-between;
   min-height: 34px;
-  padding: 0 20px;
+  /* The right edge is 8px short because the last control's padding makes it up. */
+  padding: 0 12px 0 20px;
   border-top: 1px solid var(--border-muted);
   background: transparent;
   color: var(--text-muted);
@@ -3784,20 +3799,15 @@ button[aria-expanded='true'] .wn-caret {
   color: var(--text-primary);
 }
 
-/* Text links reveal their hairline from the left. These include prose and
-   wiki links plus the two families of typographic navigation controls. */
-:is(.text-link, .editor-navigation-links button, .welcome-note-action, .tiptap a, wiki-link) {
+/* Links in a note reveal their hairline from the left. Controls in the
+   chrome never underline; they take a padded hover fill instead (see SMALL
+   CHROME CONTROLS). */
+:is(.tiptap a, wiki-link) {
   position: relative;
   text-decoration: none;
 }
 
-:is(
-  .text-link,
-  .editor-navigation-links button,
-  .welcome-note-action,
-  .tiptap a,
-  wiki-link
-)::after {
+:is(.tiptap a, wiki-link)::after {
   content: '';
   position: absolute;
   right: 0;
@@ -3811,29 +3821,16 @@ button[aria-expanded='true'] .wn-caret {
   pointer-events: none;
 }
 
-:is(
-    .text-link,
-    .editor-navigation-links button,
-    .welcome-note-action,
-    .tiptap a,
-    wiki-link
-  ):hover::after,
-:is(
-    .text-link,
-    .editor-navigation-links button,
-    .welcome-note-action,
-    .tiptap a,
-    wiki-link
-  ):focus-visible::after {
+:is(.tiptap a, wiki-link):hover::after,
+:is(.tiptap a, wiki-link):focus-visible::after {
   transform: scaleX(1);
 }
 
 /* Colour alone is not enough to mark a link — someone who cannot separate that
    hue from the body ink gets nothing. The hairline is therefore present at
    rest, just quiet, and comes up to full on hover rather than being drawn from
-   nothing. Scoped to note content: the navigation controls that share the rule
-   above are standalone and already read as controls. These rules tie with that
-   one on specificity and must stay after it, or it hides the hairline at rest. */
+   nothing. These rules tie with that one on specificity and must stay after
+   it, or it hides the hairline at rest. */
 .tiptap a::after,
 .tiptap wiki-link::after {
   transform: scaleX(1);
@@ -4276,10 +4273,10 @@ html.welcome-asteroid-cursor-active:not(.welcome-asteroid-yielded) * {
   align-items: center;
   /* Never squeezed: these controls are their labels. */
   flex: 0 0 auto;
-  /* Roomier than the 8px these started at. The labels are uppercase and
-     letterspaced, so at 8px the gap between two controls read as narrower than
-     the gap inside one word and the row scanned as a single run of text. */
-  gap: 18px;
+  /* The labels are uppercase and letterspaced, so at 8px apart two controls
+     read as one run of text. They sit 18px apart: each control's 8px padding
+     on either side plus this gap. */
+  gap: 2px;
 }
 
 .editor-footer .toolbar-button,
@@ -4301,8 +4298,8 @@ html.welcome-asteroid-cursor-active:not(.welcome-asteroid-yielded) * {
   flex: 0 0 auto;
   min-width: max-content;
   white-space: nowrap;
-  height: 32px;
-  padding: 0;
+  height: 24px;
+  padding: 0 8px;
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 500;
@@ -4314,6 +4311,139 @@ html.welcome-asteroid-cursor-active:not(.welcome-asteroid-yielded) * {
 .editor-footer-overflow-toggle:hover,
 .editor-footer-overflow-toggle[aria-expanded='true'] {
   color: var(--text-primary);
+}
+
+/* Every control along the bottom shares one look: a padded wash on hover and,
+   while its menu is open, the outline the current tab wears. */
+.editor-navigation-links button {
+  height: 24px;
+  padding: 0 8px;
+  transition:
+    color var(--dur-micro) var(--ease-standard),
+    background-color var(--dur-micro) var(--ease-standard);
+}
+
+/* SMALL CHROME CONTROLS
+   The one padded-hover rule for text controls: section titles and actions,
+   the Index's links, empty-state actions, the welcome actions, the calendar
+   arrows, toast actions and the text buttons in Settings, Graph and plugin
+   dialogs. Every button gets the hover fill; this gives it room round the
+   letters, and the negative margins keep each one where it was laid out.
+   Add `pad-hover` to a new text control rather than another selector here. */
+:is(
+  .pad-hover,
+  .section-header button,
+  .sidebar-footer-links .text-link,
+  .welcome-note-action,
+  .calendar-nav-button
+) {
+  padding: var(--control-pad-y) var(--control-pad-x);
+  margin: calc(-1 * var(--control-pad-y)) calc(-1 * var(--control-pad-x));
+}
+
+/* A control inside a sentence ("No folders yet. New folder") keeps its word
+   spaces and pads inside them, so its fill never reaches a neighbouring
+   letter; the sentence makes room rather than the fill overlapping it. */
+.pad-hover-inline {
+  padding: var(--control-pad-y) var(--control-pad-x);
+  margin: calc(-1 * var(--control-pad-y)) 0;
+}
+
+/* The Forge switcher: a captioned name with a caret, the same padded fill,
+   and a menu as wide as its longest Forge rather than the whole column. */
+.forge-switcher-trigger {
+  display: inline-flex;
+  max-width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin: -4px -8px;
+  padding: 4px 8px;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.forge-switcher-trigger[aria-expanded='true'] {
+  background: var(--bg-elevated);
+  box-shadow: inset 0 0 0 1px var(--border-default);
+}
+
+.forge-switcher-caption {
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.forge-switcher-name {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.forge-switcher-caret {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border-right: 1px solid var(--text-muted);
+  border-bottom: 1px solid var(--text-muted);
+  transform: rotate(45deg);
+}
+
+.forge-switcher-menu {
+  position: absolute;
+  top: 100%;
+  left: -8px;
+  z-index: 30;
+  min-width: 240px;
+  max-width: calc(100% + 16px);
+  margin-top: 6px;
+  padding: 4px 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-muted);
+  box-shadow: var(--shadow-md);
+}
+
+.forge-switcher-row {
+  padding: 7px 14px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  text-align: left;
+  box-shadow: inset 2px 0 0 0 transparent;
+}
+
+.forge-switcher-row[aria-selected='true'] {
+  box-shadow: inset 2px 0 0 0 var(--text-primary);
+}
+
+.forge-switcher-divider {
+  margin: 4px 0;
+  border-top: 1px solid var(--border-muted);
+}
+
+/* Options sits absolutely at the row's end, so only its own edge moves back. */
+.row-options {
+  padding: var(--control-pad-y) var(--control-pad-x);
+  margin-right: calc(-1 * var(--control-pad-x));
+}
+
+.editor-footer :is(.toolbar-button, .editor-footer-overflow-toggle)[aria-expanded='true'],
+:is(.editor-footer, .editor-navigation-links)
+  [aria-expanded='true']
+  > :is(.toolbar-button, .editor-footer-overflow-toggle, button) {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  box-shadow: inset 0 0 0 1px var(--border-default);
 }
 
 .editor-footer-color svg {
@@ -5523,11 +5653,6 @@ button.editor-index-trigger:not(:disabled):hover {
   max-height: 82vh;
   padding: 1.5rem;
   overflow-y: auto;
-}
-
-.obs-import-close {
-  padding: 0.25rem;
-  color: var(--text-muted);
 }
 
 .obs-import-grid {
