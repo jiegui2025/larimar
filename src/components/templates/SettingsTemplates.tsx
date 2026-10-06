@@ -76,7 +76,7 @@ export function SettingsTemplates({ onDeleteTemplate, onUpdateTemplate }: Settin
     <div className="space-y-6">
       {/* Default Daily Template Selection */}
       <div
-        className="p-4 space-y-2"
+        className="py-4 space-y-2"
         style={{ backgroundColor: 'var(--bg-panel)', borderRadius: 'var(--radius-md)' }}
       >
         <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -107,7 +107,7 @@ export function SettingsTemplates({ onDeleteTemplate, onUpdateTemplate }: Settin
 
       {/* Pinned Templates for Quick Picker */}
       <div
-        className="p-4 space-y-2"
+        className="py-4 space-y-2"
         style={{ backgroundColor: 'var(--bg-panel)', borderRadius: 'var(--radius-md)' }}
       >
         <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -162,7 +162,7 @@ export function SettingsTemplates({ onDeleteTemplate, onUpdateTemplate }: Settin
       {/* Default Templates (read-only list) */}
       {defaultTemplates.length > 0 && (
         <div
-          className="p-4 space-y-3"
+          className="py-4 space-y-3"
           style={{ backgroundColor: 'var(--bg-panel)', borderRadius: 'var(--radius-md)' }}
         >
           <h3 className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
@@ -205,7 +205,7 @@ export function SettingsTemplates({ onDeleteTemplate, onUpdateTemplate }: Settin
 
       {/* Custom Templates */}
       <div
-        className="p-4 space-y-3"
+        className="py-4 space-y-3"
         style={{ backgroundColor: 'var(--bg-panel)', borderRadius: 'var(--radius-md)' }}
       >
         <div className="flex items-center justify-between">

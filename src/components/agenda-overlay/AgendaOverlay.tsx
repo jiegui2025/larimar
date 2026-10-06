@@ -145,7 +145,7 @@ export function AgendaOverlay({ isOpen, onClose }: AgendaOverlayProps) {
               } as CSSProperties
             }
           >
-            Enable the calendar or timeline in Settings → Features.
+            Turn on the month calendar or the timeline in Settings → Calendar.
           </p>
         )}
       </div>
