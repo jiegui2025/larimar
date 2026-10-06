@@ -6,14 +6,11 @@ import { IndexOverlay } from '@/components/index-overlay/IndexOverlay';
 import { AgendaOverlay } from '@/components/agenda-overlay/AgendaOverlay';
 import { EditorNavigation } from './EditorNavigation';
 import { IconRail } from './IconRail';
-import { useOverlayStore, useSettingsStore, useTimelineStore } from '@/stores';
+import { useOverlayStore, useSettingsStore } from '@/stores';
 import { useElementWidth } from '@/hooks/useElementWidth';
 import { useVisualViewportHeight } from '@/hooks/useVisualViewportHeight';
 import { isMobilePlatform, isTabletPlatform } from '@/lib/platform';
 
-// TimelineView pulls in calendar/event aggregation + its own render
-// pipeline — only load it when the user actually toggles the timeline on.
-const TimelineView = lazy(() => import('../timeline').then((m) => ({ default: m.TimelineView })));
 const TrashPage = lazy(() =>
   import('../sidebar/TrashPage').then((m) => ({ default: m.TrashPage }))
 );
@@ -46,7 +43,6 @@ export function Layout() {
     setSidebarWidth,
     setRightPanelWidth,
   } = useSettingsStore();
-  const isTimelineOpen = useTimelineStore((s) => s.isOpen);
   const { activeOverlay, isSidebarHidden, isRightPanelHidden, closeOverlay } = useOverlayStore();
 
   // On a phone the shell follows the visual viewport, so the software
@@ -271,22 +267,14 @@ export function Layout() {
         >
           {railOnRight ? rightPanelColumn : sidebarColumn}
 
-          {/* Center pane — Editor by default, Timeline when toggled on */}
+          {/* Center pane: the editor */}
           <div
             className="relative flex-1 flex flex-col min-w-0"
             style={{ backgroundColor: 'var(--bg-editor)' }}
           >
-            {isTimelineOpen ? (
-              <Suspense fallback={null}>
-                <TimelineView />
-              </Suspense>
-            ) : (
-              <>
-                <Editor />
-                {/* The phone always shows the rail, whose buttons are these. */}
-                {!isMobile && <EditorNavigation />}
-              </>
-            )}
+            <Editor />
+            {/* The phone always shows the rail, whose buttons are these. */}
+            {!isMobile && <EditorNavigation />}
           </div>
 
           {railOnRight ? sidebarColumn : rightPanelColumn}

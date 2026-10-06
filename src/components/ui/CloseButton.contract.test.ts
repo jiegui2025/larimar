@@ -18,12 +18,10 @@ const NO_CLOSE: Record<string, string> = {
   'ui/WelcomeScreen.tsx': 'only asks whether a dialog is open',
   'ChromeShortcutHost.tsx': 'only asks whether a dialog is open',
   'onboarding/AppOnboardingModal.tsx': 'its steps are finished, not dismissed',
-  'timeline/TimelineView.tsx': 'being removed from the app in its own change',
 };
 
-// Tabs close a note, not a surface, and keep their own smaller ×. The
-// Timeline page is being removed from the app in its own change.
-const OWN_CLOSE = ['editor/TabBar.tsx', 'editor/OpenTabsMenu.tsx', 'timeline/TimelineView.tsx'];
+// Tabs close a note, not a surface, and keep their own smaller ×.
+const OWN_CLOSE = ['editor/TabBar.tsx', 'editor/OpenTabsMenu.tsx'];
 
 const isSurface = (source: string) =>
   /<DialogSurface\b|role="dialog"|aria-modal="true"|app-overlay\b|app-trash-overlay/.test(source);
