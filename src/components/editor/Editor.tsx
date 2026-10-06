@@ -91,6 +91,7 @@ import { checkLooseNoteOnDisk } from '@/lib/looseFiles';
 import { CloudNotePlaceholder } from './CloudNotePlaceholder';
 import { NoteHeader } from './NoteHeader';
 import { NoteCloseButton } from './NoteCloseButton';
+import { WritingToolbar } from './WritingToolbar';
 
 const MobileFormattingBar = React.lazy(() =>
   import('./MobileFormattingBar').then((module) => ({ default: module.MobileFormattingBar }))
@@ -145,6 +146,7 @@ export function Editor() {
     showTabBar,
     showEditorFooter,
     showBacklinksPanel,
+    showWritingToolbar,
   } = useSettingsStore();
   const isViewOnly = useNoteStore(isCurrentNoteViewOnly);
   const hasPins = useQuickSwitcherStore((state) => state.pinnedNoteIds.length > 0);
@@ -1250,6 +1252,14 @@ export function Editor() {
             editor &&
             !editor.isDestroyed && (
               <SelectionToolbar editor={editor} onInsertLink={handleInsertLink} />
+            )}
+          {!isCloudPlaceholder &&
+            !isViewOnly &&
+            showWritingToolbar &&
+            !isMobilePlatform() &&
+            editor &&
+            !editor.isDestroyed && (
+              <WritingToolbar editor={editor} onInsertLink={handleInsertLink} />
             )}
           {/* On a phone the formatting row carries the image actions instead. */}
           {!isCloudPlaceholder &&
