@@ -41,7 +41,7 @@ describe('quickSwitcherStore', () => {
 
     it('persists recent searches to localStorage', () => {
       useQuickSwitcherStore.getState().addRecentSearch('persisted');
-      const raw = localStorage.getItem('moldavite-quick-switcher:Default');
+      const raw = localStorage.getItem('larimar-quick-switcher:Default');
       expect(raw).toBeTruthy();
       const parsed = JSON.parse(raw ?? '{}');
       expect(parsed.state.recentSearches).toContain('persisted');
@@ -85,15 +85,15 @@ describe('quickSwitcherStore', () => {
       rememberActiveForge('Beta');
       useQuickSwitcherStore.getState().togglePinned('notes/beta.md');
 
-      const alpha = JSON.parse(localStorage.getItem('moldavite-quick-switcher:Alpha') ?? '{}');
-      const beta = JSON.parse(localStorage.getItem('moldavite-quick-switcher:Beta') ?? '{}');
+      const alpha = JSON.parse(localStorage.getItem('larimar-quick-switcher:Alpha') ?? '{}');
+      const beta = JSON.parse(localStorage.getItem('larimar-quick-switcher:Beta') ?? '{}');
       expect(alpha.state.pinnedNoteIds).toEqual(['notes/alpha.md']);
       expect(beta.state.pinnedNoteIds).toContain('notes/beta.md');
     });
 
     it("re-reads the correct Forge's pins once the active Forge is known", async () => {
       localStorage.setItem(
-        'moldavite-quick-switcher:Beta',
+        'larimar-quick-switcher:Beta',
         JSON.stringify({ state: { recentSearches: ['beta-search'], pinnedNoteIds: ['b.md'] } })
       );
       // Stand in for the stale slice hydration loaded under the previous Forge.

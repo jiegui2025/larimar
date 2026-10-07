@@ -649,13 +649,13 @@ export function PluginsSection() {
             <FolderOpen aria-hidden="true" className="w-4 h-4" />
             Install from folder…
           </button>
-          {!isInstalled('moldavite-wordpress') && (
+          {!isInstalled('larimar-wordpress') && (
             <button
               type="button"
               onClick={() =>
                 void installBundled(
                   'install_wordpress_plugin',
-                  'moldavite-wordpress',
+                  'larimar-wordpress',
                   'Publish to WordPress'
                 )
               }

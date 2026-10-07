@@ -81,7 +81,7 @@ describe('migrateSettingsState', () => {
   it('persists the quiet home screen through the settings allow-list', () => {
     useSettingsStore.getState().setQuietHomeScreen(true);
 
-    const persisted = JSON.parse(localStorage.getItem('moldavite-settings') ?? '{}') as {
+    const persisted = JSON.parse(localStorage.getItem('larimar-settings') ?? '{}') as {
       state?: Record<string, unknown>;
     };
     expect(persisted.state).toHaveProperty('quietHomeScreen', true);
@@ -91,7 +91,7 @@ describe('migrateSettingsState', () => {
     expect(useSettingsStore.getState().iconRailSide).toBe('left');
     useSettingsStore.getState().setIconRailSide('right');
 
-    const persisted = JSON.parse(localStorage.getItem('moldavite-settings') ?? '{}') as {
+    const persisted = JSON.parse(localStorage.getItem('larimar-settings') ?? '{}') as {
       state?: Record<string, unknown>;
     };
     expect(persisted.state).toHaveProperty('iconRailSide', 'right');
@@ -108,7 +108,7 @@ describe('migrateSettingsState', () => {
 
   it('hydrates an unknown rail side as the left edge', async () => {
     localStorage.setItem(
-      'moldavite-settings',
+      'larimar-settings',
       JSON.stringify({ state: { iconRailSide: 'upside-down' }, version: 1 })
     );
     await useSettingsStore.persist.rehydrate();
@@ -123,7 +123,7 @@ describe('migrateSettingsState', () => {
     });
 
     localStorage.setItem(
-      'moldavite-settings',
+      'larimar-settings',
       JSON.stringify({
         state: { showTimelineWidget: false, showCalendarWidget: false },
         version: 1,
@@ -134,7 +134,7 @@ describe('migrateSettingsState', () => {
     expect(useSettingsStore.getState().showCalendarWidget).toBe(false);
 
     useSettingsStore.getState().setFontSize('small');
-    const saved = JSON.parse(localStorage.getItem('moldavite-settings') ?? '{}');
+    const saved = JSON.parse(localStorage.getItem('larimar-settings') ?? '{}');
     expect(saved.state).not.toHaveProperty('showTimelineWidget');
   });
 });
@@ -142,7 +142,7 @@ describe('migrateSettingsState', () => {
 /** What a 2.10 install left in localStorage, before version 2 removed settings. */
 function storedV1(state: Record<string, unknown>) {
   localStorage.setItem(
-    'moldavite-settings',
+    'larimar-settings',
     JSON.stringify({
       state: {
         notesDirectory: '~/Documents/Moldavite/',
@@ -166,7 +166,7 @@ function storedV1(state: Record<string, unknown>) {
 }
 
 const persistedState = () =>
-  (JSON.parse(localStorage.getItem('moldavite-settings') ?? '{}') as { state: object }).state;
+  (JSON.parse(localStorage.getItem('larimar-settings') ?? '{}') as { state: object }).state;
 
 describe('version 2 removals', () => {
   beforeEach(() => {
@@ -239,7 +239,7 @@ describe('version 2 removals', () => {
   // reloads, so an old file takes this same path, with or without a version.
   it('imports an old settings file without a version the same way', async () => {
     localStorage.setItem(
-      'moldavite-settings',
+      'larimar-settings',
       JSON.stringify({ state: { notesDirectory: '/old', backlinksEnabled: false } })
     );
     await useSettingsStore.persist.rehydrate();

@@ -1,8 +1,8 @@
 {
-  "id": "moldavite-wordpress",
+  "id": "larimar-wordpress",
   "name": "Publish to WordPress",
   "version": "1.0.1",
-  "author": "Moldavite",
+  "author": "Larimar",
   "description": "Publish the active note as a WordPress draft, with safe updates on re-publish. WordPress.com Simple sites require OAuth and are not supported.",
   "apiVersion": 2,
   "minAppVersion": "0.1.0",

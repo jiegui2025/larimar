@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn ignores_urls_that_are_not_the_callback() {
-        assert_eq!(parse_callback("larimar://plugin/moldavite-wordpress"), None);
+        assert_eq!(parse_callback("larimar://plugin/larimar-wordpress"), None);
         assert_eq!(parse_callback("larimar://note/a.md"), None);
         assert_eq!(parse_callback("https://example.com/?code=abc"), None);
         // A near-miss host must not be treated as ours.

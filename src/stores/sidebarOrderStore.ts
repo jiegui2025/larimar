@@ -16,7 +16,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { forgeNamespacedStorage, onActiveForgeChange, readNamespaced } from '@/lib/forgeStorage';
 import type { SortOption } from './settingsStore';
 
-const SIDEBAR_ORDER_KEY = 'moldavite-sidebar-order';
+const SIDEBAR_ORDER_KEY = 'larimar-sidebar-order';
 
 interface SidebarOrderState {
   /** Note paths (`notes/…`) in user order. */

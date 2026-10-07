@@ -25,7 +25,9 @@ use zeroize::Zeroize;
 const NONCE_LENGTH: usize = 12;
 const NOTE_FORMAT_V2: &str = "v2";
 const NOTE_FORMAT_V3: &str = "v3";
-const NOTE_AAD_DOMAIN: &[u8] = b"moldavite-note-v2\0";
+/// Binds note ciphertext to this app. Upstream's notes used its own domain
+/// string, so Larimar cannot open them (ADR 0008).
+const NOTE_AAD_DOMAIN: &[u8] = b"larimar-note-v2\0";
 
 /// Argon2id parameters for the legacy `salt$nonce$ciphertext` format and V2
 /// note locks. The KDF parameters are not recorded in the ciphertext, so
@@ -320,6 +322,31 @@ mod tests {
             decrypt_note_content(&legacy, password, "standalone:any-name.md").unwrap(),
             "legacy secret"
         );
+    }
+
+    #[test]
+    fn note_ciphertext_is_bound_to_the_larimar_domain() {
+        let note_id = "standalone:domain.md";
+        assert_eq!(note_aad(note_id), b"larimar-note-v2\0standalone:domain.md");
+
+        let locked = encrypt_note_content("body", "password", note_id).unwrap();
+        assert_eq!(
+            decrypt_note_content(&locked, "password", note_id).unwrap(),
+            "body"
+        );
+
+        // The same note, password and format under another app's domain.
+        let mut foreign_aad = b"another-app-note-v2\0".to_vec();
+        foreign_aad.extend_from_slice(note_id.as_bytes());
+        let foreign = encrypt_payload(
+            "body",
+            "password",
+            &foreign_aad,
+            Some(NOTE_FORMAT_V3),
+            &hardened_argon2_v3(),
+        )
+        .unwrap();
+        assert!(decrypt_note_content(&foreign, "password", note_id).is_err());
     }
 
     #[test]

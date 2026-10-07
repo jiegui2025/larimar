@@ -86,7 +86,7 @@ describe('pluginStore', () => {
   });
 
   it('recovers from a corrupt persisted grant store without granting anything', async () => {
-    localStorage.setItem('moldavite-plugins:Default', '{truncated');
+    localStorage.setItem('larimar-plugins:Default', '{truncated');
     usePluginStore.setState({ grants: {} });
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     await expect(usePluginStore.persist.rehydrate()).resolves.toBeUndefined();
@@ -102,15 +102,15 @@ describe('pluginStore', () => {
       rememberActiveForge('Beta');
       usePluginStore.getState().grant('q', '1.0.0', HASH);
 
-      const alpha = JSON.parse(localStorage.getItem('moldavite-plugins:Alpha') ?? '{}');
-      const beta = JSON.parse(localStorage.getItem('moldavite-plugins:Beta') ?? '{}');
+      const alpha = JSON.parse(localStorage.getItem('larimar-plugins:Alpha') ?? '{}');
+      const beta = JSON.parse(localStorage.getItem('larimar-plugins:Beta') ?? '{}');
       expect(Object.keys(alpha.state.grants)).toEqual(['p']);
       expect(Object.keys(beta.state.grants)).toEqual(['q']);
     });
 
     it("re-reads the correct Forge's grants once the active Forge is known", async () => {
       localStorage.setItem(
-        'moldavite-plugins:Beta',
+        'larimar-plugins:Beta',
         JSON.stringify({
           state: { grants: { q: { enabled: true, grantedVersion: '1.0.0', grantedHash: HASH } } },
         })

@@ -20,7 +20,7 @@ beforeEach(() => {
 
 describe('settings export and import', () => {
   it('exports the folder state the folder store actually writes for the active Forge', async () => {
-    localStorage.setItem('moldavite-folders:Work', '{"state":{"expanded":["a"]}}');
+    localStorage.setItem('larimar-folders:Work', '{"state":{"expanded":["a"]}}');
     save.mockResolvedValue('/tmp/settings.json');
     invoke.mockResolvedValue(undefined);
     render(<SettingsData />);
@@ -30,8 +30,9 @@ describe('settings export and import', () => {
     );
     const [command, { json }] = invoke.mock.calls[0];
     expect(command).toBe('export_settings_json');
+    expect(JSON.parse(json)).toMatchObject({ app: 'larimar', kind: 'settings' });
     expect(JSON.parse(json).entries).toMatchObject({
-      'moldavite-folders:Work': '{"state":{"expanded":["a"]}}',
+      'larimar-folders:Work': '{"state":{"expanded":["a"]}}',
     });
   });
 
@@ -39,16 +40,36 @@ describe('settings export and import', () => {
     open.mockResolvedValue('/tmp/settings.json');
     invoke.mockResolvedValue(
       JSON.stringify({
-        app: 'moldavite',
+        app: 'larimar',
         kind: 'settings',
         version: 1,
         exportedAt: '2026-01-01T00:00:00.000Z',
-        entries: { 'moldavite-folders:Work': '{"state":{"expanded":["b"]}}' },
+        entries: { 'larimar-folders:Work': '{"state":{"expanded":["b"]}}' },
       })
     );
     render(<SettingsData />);
     fireEvent.click(screen.getByRole('button', { name: 'Import settings (.json)' }));
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
-    expect(localStorage.getItem('moldavite-folders:Work')).toBe('{"state":{"expanded":["b"]}}');
+    expect(localStorage.getItem('larimar-folders:Work')).toBe('{"state":{"expanded":["b"]}}');
+  });
+
+  it('refuses a settings file another app wrote', async () => {
+    open.mockResolvedValue('/tmp/settings.json');
+    invoke.mockResolvedValue(
+      JSON.stringify({
+        app: 'another-app',
+        kind: 'settings',
+        version: 1,
+        exportedAt: '2026-01-01T00:00:00.000Z',
+        entries: { 'larimar-folders:Work': '{"state":{"expanded":["b"]}}' },
+      })
+    );
+    render(<SettingsData />);
+    fireEvent.click(screen.getByRole('button', { name: 'Import settings (.json)' }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Not a valid Larimar settings file')
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(localStorage.getItem('larimar-folders:Work')).not.toBe('{"state":{"expanded":["b"]}}');
   });
 });

@@ -27,7 +27,7 @@ describe('active Forge fallback', () => {
   it("falls back to the backend's DEFAULT_FORGE_NAME", () => {
     // Mirrors `DEFAULT_FORGE_NAME` in src-tauri/src/paths.rs.
     expect(getActiveForgeName()).toBe('Default');
-    expect(namespacedKey('moldavite-recent-notes')).toBe('moldavite-recent-notes:Default');
+    expect(namespacedKey('larimar-recent-notes')).toBe('larimar-recent-notes:Default');
   });
 
   it('prefers the cached name once a Forge is known', () => {
@@ -75,30 +75,30 @@ describe('forgeNamespacedStorage', () => {
 
 describe('readNamespacedWithLegacyFallback', () => {
   it('copies a flat legacy value into the namespaced slot on first read, once', () => {
-    localStorage.setItem('moldavite-folders', 'legacy-value');
+    localStorage.setItem('larimar-folders', 'legacy-value');
 
-    expect(readNamespacedWithLegacyFallback('moldavite-folders')).toBe('legacy-value');
-    expect(localStorage.getItem('moldavite-folders:Default')).toBe('legacy-value');
+    expect(readNamespacedWithLegacyFallback('larimar-folders')).toBe('legacy-value');
+    expect(localStorage.getItem('larimar-folders:Default')).toBe('legacy-value');
 
     // The legacy key is left in place, but a later read no longer needs it —
     // the namespaced slot now answers directly.
-    localStorage.setItem('moldavite-folders', 'changed-after-migration');
-    expect(readNamespacedWithLegacyFallback('moldavite-folders')).toBe('legacy-value');
+    localStorage.setItem('larimar-folders', 'changed-after-migration');
+    expect(readNamespacedWithLegacyFallback('larimar-folders')).toBe('legacy-value');
   });
 
   it('keeps two Forges separate even when both start from the same legacy value', () => {
-    localStorage.setItem('moldavite-folders', 'legacy-value');
+    localStorage.setItem('larimar-folders', 'legacy-value');
 
     rememberActiveForge('Alpha');
-    expect(readNamespacedWithLegacyFallback('moldavite-folders')).toBe('legacy-value');
-    forgeNamespacedStorageWithLegacyFallback.setItem('moldavite-folders', 'alpha-edit');
+    expect(readNamespacedWithLegacyFallback('larimar-folders')).toBe('legacy-value');
+    forgeNamespacedStorageWithLegacyFallback.setItem('larimar-folders', 'alpha-edit');
 
     rememberActiveForge('Beta');
-    expect(readNamespacedWithLegacyFallback('moldavite-folders')).toBe('legacy-value');
-    forgeNamespacedStorageWithLegacyFallback.setItem('moldavite-folders', 'beta-edit');
+    expect(readNamespacedWithLegacyFallback('larimar-folders')).toBe('legacy-value');
+    forgeNamespacedStorageWithLegacyFallback.setItem('larimar-folders', 'beta-edit');
 
-    expect(localStorage.getItem('moldavite-folders:Alpha')).toBe('alpha-edit');
-    expect(localStorage.getItem('moldavite-folders:Beta')).toBe('beta-edit');
+    expect(localStorage.getItem('larimar-folders:Alpha')).toBe('alpha-edit');
+    expect(localStorage.getItem('larimar-folders:Beta')).toBe('beta-edit');
   });
 
   it('returns null when neither the namespaced slot nor the legacy key exist', () => {

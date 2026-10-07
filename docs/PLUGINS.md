@@ -83,9 +83,9 @@ Copying a folder into `<Forge>/.plugins/` by hand still works for development: r
 
 ## Quick start
 
-To start from working code, install the **Example Plugin** (`moldavite-example`: a timestamp
+To start from working code, install the **Example Plugin** (`larimar-example`: a timestamp
 command and a word count) with **Install from folder…**. Its source is in this repository under
-[`src-tauri/example-plugin/moldavite-example/`](../src-tauri/example-plugin/moldavite-example/).
+[`src-tauri/example-plugin/larimar-example/`](../src-tauri/example-plugin/larimar-example/).
 Copy that folder, rename it and change the manifest `id` to make it your own. It declares API v1,
 which still runs; set `apiVersion` to 2 before you use the v2 calls below.
 
@@ -598,7 +598,7 @@ Moldavite rather than in the plugin folder.
 ## Worked reference: Publish to WordPress
 
 Moldavite bundles a dependency-free first-party **Publish to WordPress** API v2
-plugin under `src-tauri/example-plugin/moldavite-wordpress/`. Install it from
+plugin under `src-tauri/example-plugin/larimar-wordpress/`. Install it from
 **Settings → Plugins**, enable it, and inspect its manifest, source, and README
 as an end-to-end reference.
 

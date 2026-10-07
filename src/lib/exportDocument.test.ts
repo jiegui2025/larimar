@@ -23,8 +23,23 @@ it('keeps desktop note and encrypted backup writes at the selected destination',
   expect(invoke).not.toHaveBeenCalled();
 });
 
+it('names encrypted backups with the Larimar backup extension', async () => {
+  vi.useFakeTimers({ now: new Date('2026-10-07T12:00:00Z'), toFake: ['Date'] });
+  try {
+    await exportDocument({ kind: 'backup', password: 'test password' });
+  } finally {
+    vi.useRealTimers();
+  }
+  expect(save).toHaveBeenCalledWith(
+    expect.objectContaining({
+      defaultPath: 'larimar-backup-2026-10-07.larimar-backup',
+      filters: [{ name: 'Larimar Backup', extensions: ['larimar-backup'] }],
+    })
+  );
+});
+
 it('keeps desktop settings payloads and destination intact', async () => {
-  const json = '{"app":"moldavite"}';
+  const json = '{"app":"larimar"}';
   expect(await exportDocument({ kind: 'settings', json })).toBe(true);
   expect(invoke).toHaveBeenCalledWith('export_settings_json', { path: '/chosen/export', json });
 });

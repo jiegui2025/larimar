@@ -245,7 +245,7 @@ fn create_import_staging_dir(notes_dir: &Path) -> Result<PathBuf, String> {
 
     for _ in 0..32 {
         let suffix = rand::RngCore::next_u64(&mut rand::rngs::OsRng);
-        let path = parent.join(format!(".{forge_name}.moldavite-import-{suffix:016x}.tmp"));
+        let path = parent.join(format!(".{forge_name}.larimar-import-{suffix:016x}.tmp"));
         // Only the Unix branch mutates this, so on Windows `mut` is unused and
         // `-D warnings` fails the build there. Windows inherits the parent
         // directory's ACL, which is the equivalent protection.
@@ -458,6 +458,12 @@ fn import_notes_into(
     }
 }
 
+/// First line of an encrypted backup. Upstream's backups carry their own
+/// header, so Larimar refuses them (ADR 0008).
+const BACKUP_HEADER: &str = "LARIMAR_ENCRYPTED_BACKUP_V1";
+/// The extension the save dialog offers; `exportDocument.ts` uses the same.
+const BACKUP_EXTENSION: &str = "larimar-backup";
+
 #[tauri::command]
 pub(crate) fn export_encrypted_backup(
     destination: String,
@@ -475,7 +481,7 @@ fn export_encrypted_backup_to(
     backup_path: &Path,
     password: &str,
 ) -> Result<(), String> {
-    validate_user_export_path(backup_path, "moldavite-backup")?;
+    validate_user_export_path(backup_path, BACKUP_EXTENSION)?;
     export_encrypted_backup_from(notes_dir, backup_path, password)
 }
 
@@ -513,7 +519,7 @@ fn export_encrypted_backup_from(
     ));
     let encrypted = encryption::encrypt_content(&zip_b64, password)?;
 
-    let backup_content = format!("MOLDAVITE_ENCRYPTED_BACKUP_V1\n{}", encrypted);
+    let backup_content = format!("{BACKUP_HEADER}\n{encrypted}");
 
     crate::persist::write_atomic(backup_path, backup_content.as_bytes(), Some(0o600))
         .map_err(|e| format!("Failed to write backup file: {}", e))?;
@@ -549,7 +555,7 @@ fn import_encrypted_backup_into(
         .map_err(|e| format!("Failed to read backup file: {}", e))?;
 
     let lines: Vec<&str> = backup_content.splitn(2, '\n').collect();
-    if lines.len() != 2 || lines[0] != "MOLDAVITE_ENCRYPTED_BACKUP_V1" {
+    if lines.len() != 2 || lines[0] != BACKUP_HEADER {
         return Err("Invalid backup file format".to_string());
     }
     let encrypted = lines[1];
@@ -709,12 +715,12 @@ mod tests {
 
         assert!(export_encrypted_backup_to(
             &source,
-            Path::new("relative.moldavite-backup"),
+            Path::new("relative.larimar-backup"),
             "password"
         )
         .is_err());
 
-        let backup = tmp.0.join("vault.moldavite-backup");
+        let backup = tmp.0.join("vault.larimar-backup");
         export_encrypted_backup_to(&source, &backup, "password").unwrap();
         assert!(backup.is_file());
     }
@@ -806,8 +812,11 @@ mod tests {
         scaffold(&restored);
         fs::create_dir_all(source.join("notes/Nested")).unwrap();
         fs::write(source.join("notes/Nested/secret.md"), "private body").unwrap();
-        let backup = tmp.0.join("vault.moldavite-backup");
+        let backup = tmp.0.join("vault.larimar-backup");
         export_encrypted_backup_from(&source, &backup, "correct horse battery staple").unwrap();
+        assert!(fs::read_to_string(&backup)
+            .unwrap()
+            .starts_with("LARIMAR_ENCRYPTED_BACKUP_V1\n"));
         let wrong =
             import_encrypted_backup_into(&restored, &backup, "wrong password", false).unwrap_err();
         assert!(wrong.contains("wrong password or corrupted data"));
@@ -819,6 +828,31 @@ mod tests {
             fs::read_to_string(restored.join("notes/Nested/secret.md")).unwrap(),
             "private body"
         );
+    }
+
+    #[test]
+    fn a_backup_under_another_apps_header_is_refused() {
+        let tmp = TempDir::new("foreign-header");
+        let source = tmp.0.join("source");
+        let restored = tmp.0.join("restored");
+        scaffold(&source);
+        scaffold(&restored);
+        fs::write(source.join("notes/secret.md"), "private body").unwrap();
+        let backup = tmp.0.join("vault.larimar-backup");
+        export_encrypted_backup_from(&source, &backup, "password").unwrap();
+        let payload = fs::read_to_string(&backup).unwrap();
+        let (_, encrypted) = payload.split_once('\n').unwrap();
+        fs::write(
+            &backup,
+            format!("ANOTHER_APP_ENCRYPTED_BACKUP_V1\n{encrypted}"),
+        )
+        .unwrap();
+
+        assert_eq!(
+            import_encrypted_backup_into(&restored, &backup, "password", false).unwrap_err(),
+            "Invalid backup file format"
+        );
+        assert!(!restored.join("notes/secret.md").exists());
     }
 
     fn write_zip(path: &Path, names: impl IntoIterator<Item = String>) {

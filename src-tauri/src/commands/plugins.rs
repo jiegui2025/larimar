@@ -541,8 +541,8 @@ fn install_bundled_plugin(
 pub(crate) fn install_wordpress_plugin(app: tauri::AppHandle) -> Result<(), String> {
     install_bundled_plugin(
         &app,
-        "example-plugin/moldavite-wordpress",
-        "moldavite-wordpress",
+        "example-plugin/larimar-wordpress",
+        "larimar-wordpress",
     )
 }
 
@@ -612,7 +612,7 @@ mod tests {
 
     #[test]
     fn accepts_valid_ids() {
-        assert!(is_valid_plugin_id("moldavite-example"));
+        assert!(is_valid_plugin_id("larimar-example"));
         assert!(is_valid_plugin_id("abc123"));
         assert!(is_valid_plugin_id("a"));
     }
@@ -965,12 +965,12 @@ mod tests {
             std::process::id()
         ));
         let src = root.join("source");
-        let dest = root.join("plugins/moldavite-wordpress");
+        let dest = root.join("plugins/larimar-wordpress");
         fs::remove_dir_all(&root).ok();
         fs::create_dir_all(&src).unwrap();
         fs::write(src.join("plugin.js"), "export default () => {};").unwrap();
 
-        let error = copy_plugin_files(&src, &dest, "moldavite-wordpress").unwrap_err();
+        let error = copy_plugin_files(&src, &dest, "larimar-wordpress").unwrap_err();
         assert!(error.contains("missing manifest.json"));
         assert!(!dest.exists());
 
@@ -984,27 +984,27 @@ mod tests {
             std::process::id()
         ));
         let src = root.join("source");
-        let dest = root.join("plugins/moldavite-wordpress");
+        let dest = root.join("plugins/larimar-wordpress");
         fs::remove_dir_all(&root).ok();
         fs::create_dir_all(&src).unwrap();
         for (name, contents) in [
-            ("manifest.json", r#"{"id":"moldavite-wordpress"}"#),
+            ("manifest.json", r#"{"id":"larimar-wordpress"}"#),
             ("plugin.js", "export default () => {};"),
             ("README.md", "# Publish to WordPress"),
         ] {
             fs::write(src.join(name), contents).unwrap();
         }
 
-        copy_plugin_files(&src, &dest, "moldavite-wordpress").unwrap();
+        copy_plugin_files(&src, &dest, "larimar-wordpress").unwrap();
         assert_eq!(
             fs::read_to_string(dest.join("manifest.json")).unwrap(),
-            r#"{"id":"moldavite-wordpress"}"#
+            r#"{"id":"larimar-wordpress"}"#
         );
         assert!(dest.join("plugin.js").is_file());
         assert!(dest.join("README.md").is_file());
 
         fs::remove_dir_all(&dest).unwrap();
-        copy_plugin_files(&src, &dest, "moldavite-wordpress").unwrap();
+        copy_plugin_files(&src, &dest, "larimar-wordpress").unwrap();
         assert!(dest.join("manifest.json").is_file());
 
         fs::remove_dir_all(root).ok();

@@ -11,7 +11,7 @@ import { isLooseId } from '@/lib/looseId';
 import { useOverlayStore } from './overlayStore';
 
 const MAX_RECENT_SEARCHES = 5;
-const QUICK_SWITCHER_KEY = 'moldavite-quick-switcher';
+const QUICK_SWITCHER_KEY = 'larimar-quick-switcher';
 
 interface QuickSwitcherState {
   /** Mirror of `useOverlayStore`'s `search` surface — never set it directly. */

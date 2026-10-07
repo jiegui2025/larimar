@@ -93,7 +93,7 @@
       }
     ],
     "resources": [
-      "example-plugin/moldavite-wordpress/**/*"
+      "example-plugin/larimar-wordpress/**/*"
     ],
     "icon": [
       "icons/32x32.png",

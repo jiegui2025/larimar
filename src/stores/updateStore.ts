@@ -337,7 +337,7 @@ export const useUpdateStore = create<UpdateState>()(
       };
     },
     {
-      name: 'moldavite-updates',
+      name: 'larimar-updates',
       version: 0, // Hook for future migrations; no shape changes yet.
       partialize: (state): PersistedUpdateState => ({
         availableVersion: state.availableVersion,
