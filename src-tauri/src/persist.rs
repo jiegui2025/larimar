@@ -424,16 +424,21 @@ pub(crate) fn is_case_only_rename(from: &Path, to: &Path) -> bool {
     {
         return false;
     }
+    same_file(from, to)
+}
+
+/// Whether both paths exist and open the same file or folder.
+pub(crate) fn same_file(a: &Path, b: &Path) -> bool {
     #[cfg(unix)]
     {
         use std::os::unix::fs::MetadataExt;
-        match (fs::symlink_metadata(from), fs::symlink_metadata(to)) {
+        match (fs::symlink_metadata(a), fs::symlink_metadata(b)) {
             (Ok(a), Ok(b)) => a.dev() == b.dev() && a.ino() == b.ino(),
             _ => false,
         }
     }
     #[cfg(not(unix))]
-    match (fs::canonicalize(from), fs::canonicalize(to)) {
+    match (fs::canonicalize(a), fs::canonicalize(b)) {
         (Ok(a), Ok(b)) => a == b,
         _ => false,
     }
