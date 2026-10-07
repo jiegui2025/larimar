@@ -3,7 +3,7 @@ dist/
 
 # Chrome derives the extension ID from this key. Losing it changes the ID and
 # unpairs every install; publishing it lets anyone sign an extension that the
-# host manifest will accept. Keep it in 1Password, never here.
+# host manifest will accept. Keep it with the other signing keys, never here.
 key.pem
 key.pub.txt
 

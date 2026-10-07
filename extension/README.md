@@ -7,19 +7,16 @@ survive, images and styling do not.
 
 **Chrome, Edge, Brave**
 
-Install **Moldavite Clipper** from the
-[Chrome Web Store](https://chromewebstore.google.com/detail/ngdbcbhchiifacekdkjpjbjmegkeodig).
-Edge asks you to allow extensions from other stores the first time.
+There is no Chrome Web Store item yet. Build it (see [Development](#development)),
+open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**
+and choose `dist/chrome`.
 
 **Firefox**
 
-1. Download `moldavite-clipper.xpi` from the
-   [latest release](https://github.com/mauropereiira/Moldavite/releases/latest),
-   if that release has one.
-2. Open it in Firefox and confirm.
-
-Firefox installs only signed add-ons, so this file is signed by Mozilla. It is
-not listed in their store; the download stays here.
+There is no signed add-on yet, and Firefox installs only signed ones. To try
+it, build it and load `dist/firefox/manifest.json` from
+`about:debugging#/runtime/this-firefox` as a temporary add-on; Firefox removes
+it on restart.
 
 Then open Moldavite → Settings → Plugins and press **Connect browser**. Nothing
 can reach your notes until you do.
@@ -73,11 +70,10 @@ manifest that **Connect browser** writes.
   to upload.
 - `dist/firefox` drops `key` and keeps the Gecko id.
 
-The store assigns an id that will not match the unpacked one, and the app only
-opens the bridge to ids it knows, so both ids are listed in
-`CHROME_EXTENSION_IDS` in `src-tauri/src/commands/browser_bridge.rs`. A
-recreated store item would get a new id, which has to be added there and
-shipped in an app release.
+A store item gets an id that will not match the unpacked one, and the app only
+opens the bridge to ids it knows (`CHROME_EXTENSION_IDS` in
+`src-tauri/src/commands/browser_bridge.rs`). That list holds only the unpacked
+id today; a store id has to be added there and shipped in an app release.
 
 ## Development
 
@@ -87,6 +83,8 @@ npm test          # conversion and popup, in jsdom — no browser needed
 npm run build     # dist/chrome, dist/chrome-store and dist/firefox
 ```
 
-`key.pem` is gitignored and lives in 1Password. Chrome derives the extension ID
-from it, the host manifest pins that ID, and generating a new key unpairs every
-existing install.
+`key.pem` is gitignored and kept outside the repository with the other signing
+keys; `manifest.json` carries its public half. Chrome derives the extension ID
+from that, the host manifest pins the ID, and generating a new key unpairs every
+existing install. A Rust test (`browser_bridge.rs`) fails if the manifest key,
+the pinned ID, the Gecko id or the host name drift apart.

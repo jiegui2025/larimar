@@ -3,7 +3,7 @@
   "name": "Moldavite Clipper",
   "version": "1.0.0",
   "description": "Save the page you are reading as a Markdown note in Moldavite.",
-  "homepage_url": "https://moldavite.dev/",
+  "homepage_url": "https://github.com/jiegui2025/larimar",
   "permissions": [
     "activeTab",
     "scripting",
@@ -28,10 +28,10 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'none'"
   },
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsKhwBeJwJXg3ti/q8OKIcVOViJsjemkxHtQi1k5WhSjQPLm0yUB983Tpght84KVPqSqhUjQGqKRt0BriA3L/6bhhBChhi7am1roGxAps/cKqaARCTzG0P7R5+66AA7DnWIozjmst0koEdoS6hCwS+Jek3ly25O2/9xWomC3JYxXaW+ywgjFAoYzbGIN3/Jq4XbDP5qKNnOL6qRPLfifAzSp2q7Cf0ZNVpTwmMFKUwPLE1MFqxkc5MekKLjHEPfVFW3OPS2hcZ3mqTJhbhybXiIKfs2pOEngZU1B9djT7nnYZRPaaC8w6nh8u3hPmZ19W5Z6De4t8VvhAIbU3D2hF/wIDAQAB",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlcprUFbLgnPRE31fmKtz+fZLbRlJ6mVjBQhtFJym693JDg4bSQtp7UqZwHcm0n9zQ+yzZr/irwugN8VaBfVSrApSiwoE5cQKv/GopHHJ0QXeQ6647pib85S23W0uy8e+BFS8ZzH0xk26ZkXSKRNkWTlTRVt5UQfpRLsrTjDlpKUi5vuEPpCwEmIwDlyHGsd8wYHbOn0Pn0pRHkP5ebyBUriQuffxSuIo1fPcAijb+SjsGqu+zmBEfYlV05QzE+SyuEuf5AesIJ5pxVR1OsLfjU/jwXMLd0KDCqxuwOQueMYJLQI+/opuuZdM07+gc1sJZv4OgGpGRPdBVaMlPW5cywIDAQAB",
   "browser_specific_settings": {
     "gecko": {
-      "id": "clipper@moldavite.app",
+      "id": "clipper@larimar.invalid",
       "strict_min_version": "128.0"
     }
   }

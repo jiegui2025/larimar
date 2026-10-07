@@ -6,7 +6,7 @@
 
 import { htmlToMarkdown } from './convert.js';
 
-const HOST = 'com.moldavite.clipper';
+const HOST = 'app.larimar.clipper';
 /** No real article is this big, and failing here says something the host cannot. */
 const MAX_MARKDOWN_BYTES = 5 * 1024 * 1024;
 const NOT_CONNECTED =

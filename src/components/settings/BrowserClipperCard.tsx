@@ -4,8 +4,10 @@
  *
  * "Install extension" never navigates on its own. It shows the steps first,
  * because both browsers are about to ask for something unusual (Developer mode
- * in Chrome, a signed file in Firefox), and meeting that for the first time on
- * chrome://extensions is how people conclude the app is broken.
+ * in Chrome, a temporary add-on in Firefox), and meeting that for the first
+ * time on chrome://extensions is how people conclude the app is broken. Until
+ * a Larimar release ships packaged builds, the steps build the extension from
+ * the repository that "Understood" opens.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -16,7 +18,7 @@ import { DialogSurface } from '@/components/ui';
 import { CloseButton } from '@/components/ui/CloseButton';
 import { Row } from './common';
 
-const EXTENSION_URL = 'https://github.com/mauropereiira/Moldavite/tree/main/extension';
+const EXTENSION_URL = 'https://github.com/jiegui2025/larimar/tree/main/extension';
 
 interface BridgeTarget {
   label: string;
@@ -138,14 +140,16 @@ export function BrowserClipperCard() {
               >
                 <ol className="list-decimal pl-4 space-y-1">
                   <li>
-                    Download and unzip <code>moldavite-clipper-chrome.zip</code>.
+                    In the repository&apos;s <code>extension</code> folder, run{' '}
+                    <code>npm install</code> and <code>npm run build</code>.
                   </li>
                   <li>
                     Open <code>chrome://extensions</code> and turn on{' '}
                     <strong>Developer mode</strong>.
                   </li>
                   <li>
-                    Click <strong>Load unpacked</strong> and choose the unzipped folder.
+                    Click <strong>Load unpacked</strong> and choose{' '}
+                    <code>extension/dist/chrome</code>.
                   </li>
                 </ol>
                 <p className="mt-2">
@@ -161,13 +165,18 @@ export function BrowserClipperCard() {
               >
                 <ol className="list-decimal pl-4 space-y-1">
                   <li>
-                    Download <code>moldavite-clipper.xpi</code>.
+                    Build the extension the same way: <code>npm install</code> and{' '}
+                    <code>npm run build</code> in <code>extension</code>.
                   </li>
-                  <li>Open it in Firefox and confirm.</li>
+                  <li>
+                    Open <code>about:debugging#/runtime/this-firefox</code>, click{' '}
+                    <strong>Load Temporary Add-on…</strong> and choose{' '}
+                    <code>extension/dist/firefox/manifest.json</code>.
+                  </li>
                 </ol>
                 <p className="mt-2">
-                  Firefox installs only signed add-ons, so this file is signed by Mozilla. It is not
-                  listed in their store; the download stays here.
+                  Firefox installs only signed add-ons and there is no signed Larimar add-on yet, so
+                  this one is temporary: Firefox removes it when it restarts.
                 </p>
               </Disclosure>
             </div>

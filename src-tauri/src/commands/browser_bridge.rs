@@ -13,23 +13,20 @@ use serde_json::{json, Value};
 use crate::browser_host::GECKO_EXTENSION_ID;
 use crate::persist::write_atomic;
 
-pub(crate) const HOST_NAME: &str = "com.moldavite.clipper";
+pub(crate) const HOST_NAME: &str = "app.larimar.clipper";
 
 /// Every Chromium extension id the bridge will talk to.
 ///
-/// An id is the hash of the packaging key, so the unpacked build and the Web
+/// An id is the hash of the packaging key, so the unpacked build and a Web
 /// Store build of the *same* extension have different ones: the store re-signs
-/// with its own key. Pinning a single id therefore means whichever build is not
-/// pinned gets refused by the browser with no error the user can act on.
+/// with its own key. A build whose id is not listed gets refused by the
+/// browser with no error the user can act on.
 ///
-/// The first entry is the unpacked build, derived from `extension/key.pem`.
-/// Regenerating that key changes it and unpairs every unpacked install.
-pub(crate) const CHROME_EXTENSION_IDS: &[&str] = &[
-    // Unpacked, from extension/key.pem.
-    "dgidmimgcpmanonfbijebppdmfhnhhem",
-    // Chrome Web Store, item "Moldavite Clipper".
-    "ngdbcbhchiifacekdkjpjbjmegkeodig",
-];
+/// The first entry is the unpacked build, derived from the public key in
+/// `extension/manifest.json` (private half `extension/key.pem`, never
+/// committed). Regenerating that key changes it and unpairs every unpacked
+/// install. Larimar has no Web Store item yet; its id would follow.
+pub(crate) const CHROME_EXTENSION_IDS: &[&str] = &["kkccoipmjfacfodgaojcgeenpbofifla"];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Flavor {
@@ -47,7 +44,7 @@ pub(crate) struct BridgeTarget {
 fn manifest_body(flavor: Flavor, binary: &Path) -> Value {
     let mut body = json!({
         "name": HOST_NAME,
-        "description": "Moldavite page clipper",
+        "description": "Larimar page clipper",
         "path": binary.to_string_lossy(),
         "type": "stdio",
     });
@@ -321,6 +318,34 @@ mod tests {
         assert!(manifest.get("allowed_extensions").is_none());
 
         let _ = std::fs::remove_dir_all(&home);
+    }
+
+    /// The extension in this repository and the host manifests must agree on
+    /// the host name and both ids, or the browser refuses the pairing.
+    #[test]
+    fn the_extension_in_this_repo_pairs_with_this_host() {
+        use base64::Engine as _;
+        use sha2::{Digest, Sha256};
+
+        let manifest: Value =
+            serde_json::from_str(include_str!("../../../extension/manifest.json")).unwrap();
+        let key = base64::engine::general_purpose::STANDARD
+            .decode(manifest["key"].as_str().unwrap())
+            .unwrap();
+        // Chrome's id for an unpacked extension: the first 128 bits of the
+        // SHA-256 of its public key, one letter a-p per hex digit.
+        let unpacked_id: String = Sha256::digest(&key)[..16]
+            .iter()
+            .flat_map(|byte| [byte >> 4, byte & 0x0f])
+            .map(|nibble| char::from(b'a' + nibble))
+            .collect();
+        assert_eq!(CHROME_EXTENSION_IDS.first(), Some(&unpacked_id.as_str()));
+        assert_eq!(
+            manifest["browser_specific_settings"]["gecko"]["id"],
+            GECKO_EXTENSION_ID
+        );
+        assert!(include_str!("../../../extension/src/popup.js")
+            .contains(&format!("const HOST = '{HOST_NAME}';")));
     }
 
     #[test]
