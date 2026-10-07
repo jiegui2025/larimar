@@ -8,7 +8,7 @@
 	<true/>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
-		<string>iCloud.app.moldavite</string>
+		<string>iCloud.app.larimar</string>
 	</array>
 	<key>com.apple.developer.icloud-services</key>
 	<array>
@@ -16,12 +16,8 @@
 	</array>
 	<key>com.apple.developer.ubiquity-container-identifiers</key>
 	<array>
-		<string>iCloud.app.moldavite</string>
+		<string>iCloud.app.larimar</string>
 	</array>
-	<key>com.apple.developer.team-identifier</key>
-	<string>J6Z5WJKHZB</string>
-	<key>com.apple.application-identifier</key>
-	<string>J6Z5WJKHZB.app.moldavite</string>
 	<key>com.apple.developer.icloud-container-environment</key>
 	<string>Production</string>
 </dict>

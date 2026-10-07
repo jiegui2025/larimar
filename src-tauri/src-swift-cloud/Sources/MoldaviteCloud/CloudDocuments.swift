@@ -63,7 +63,7 @@ public struct CloudItem: Codable {
 /// Only this app's Documents container, never an arbitrary caller-supplied root.
 /// The Foundation-only core also builds on macOS for filesystem regression tests.
 public final class CloudDocuments {
-    public static let containerIdentifier = "iCloud.app.moldavite"
+    public static let containerIdentifier = "iCloud.app.larimar"
     public let root: URL
     private let checkIdentity: () throws -> Void
 

@@ -23,10 +23,10 @@ const envPath = join(root, '.env.local');
 /** Keys this script is willing to pass through, so a stray line in the file
  *  cannot quietly inject something else into the build. */
 const ALLOWED = new Set([
-  'MOLDAVITE_GOOGLE_CLIENT_ID',
-  'MOLDAVITE_GOOGLE_CLIENT_SECRET',
-  'MOLDAVITE_WPCOM_CLIENT_ID',
-  'MOLDAVITE_WPCOM_CLIENT_SECRET',
+  'LARIMAR_GOOGLE_CLIENT_ID',
+  'LARIMAR_GOOGLE_CLIENT_SECRET',
+  'LARIMAR_WPCOM_CLIENT_ID',
+  'LARIMAR_WPCOM_CLIENT_SECRET',
 ]);
 
 const env = { ...process.env };

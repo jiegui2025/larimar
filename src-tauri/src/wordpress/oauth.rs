@@ -61,8 +61,8 @@ const TOKEN_ACCOUNT: &str = "wordpress:access_token";
 /// window in which an injected callback is accepted.
 const AUTH_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 
-pub const CLIENT_ID: Option<&str> = option_env!("MOLDAVITE_WPCOM_CLIENT_ID");
-pub const CLIENT_SECRET: Option<&str> = option_env!("MOLDAVITE_WPCOM_CLIENT_SECRET");
+pub const CLIENT_ID: Option<&str> = option_env!("LARIMAR_WPCOM_CLIENT_ID");
+pub const CLIENT_SECRET: Option<&str> = option_env!("LARIMAR_WPCOM_CLIENT_SECRET");
 
 pub fn is_configured() -> bool {
     CLIENT_ID.is_some_and(|v| !v.is_empty()) && CLIENT_SECRET.is_some_and(|v| !v.is_empty())
@@ -70,7 +70,7 @@ pub fn is_configured() -> bool {
 
 pub fn not_configured_message() -> String {
     "This build has no WordPress.com credentials, so publishing cannot be connected. \
-     Builds made without MOLDAVITE_WPCOM_CLIENT_ID and MOLDAVITE_WPCOM_CLIENT_SECRET \
+     Builds made without LARIMAR_WPCOM_CLIENT_ID and LARIMAR_WPCOM_CLIENT_SECRET \
      report the feature as unavailable rather than failing later."
         .to_string()
 }

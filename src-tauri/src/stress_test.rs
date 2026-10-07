@@ -302,8 +302,8 @@ fn stress_index_versus_scan_over_10000_note_vault() {
 /// 1.33 s, index query 11 ms, cold reconcile 8.4 s, warm reconcile 477 ms.
 #[test]
 fn stress_index_versus_scan_over_50000_note_vault() {
-    if std::env::var("MOLDAVITE_STRESS_LARGE").as_deref() != Ok("1") {
-        eprintln!("[stress] 50,000-note run skipped; set MOLDAVITE_STRESS_LARGE=1 to include it");
+    if std::env::var("LARIMAR_STRESS_LARGE").as_deref() != Ok("1") {
+        eprintln!("[stress] 50,000-note run skipped; set LARIMAR_STRESS_LARGE=1 to include it");
         return;
     }
     stress_index_versus_scan(50_000);
