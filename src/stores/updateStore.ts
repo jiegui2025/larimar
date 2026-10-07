@@ -19,7 +19,14 @@ export interface UpdateState {
   progress: number;
   error: string | null;
   isChecking: boolean;
-  /** Unix timestamp of the last successful updater response. */
+  /** The feed has never offered a release: no release is published yet. */
+  noReleaseYet: boolean;
+  /**
+   * Some check has succeeded against the feed. From then on a release-not-found
+   * answer is an outage (a 5xx, a proxy's 403), not an empty feed.
+   */
+  feedHasRelease: boolean;
+  /** Unix timestamp of the last answered check: an update, none, or no release yet. */
   lastCheckedAt: number | null;
   dismissed: boolean;
   /** Whether the app checks for updates on its own (launch, interval, focus). */
@@ -38,7 +45,12 @@ export interface UpdateState {
 
 type PersistedUpdateState = Pick<
   UpdateState,
-  'availableVersion' | 'lastCheckedAt' | 'dismissed' | 'autoCheck'
+  | 'availableVersion'
+  | 'lastCheckedAt'
+  | 'dismissed'
+  | 'autoCheck'
+  | 'noReleaseYet'
+  | 'feedHasRelease'
 >;
 
 const initialUpdateState = {
@@ -47,6 +59,8 @@ const initialUpdateState = {
   progress: 0,
   error: null,
   isChecking: false,
+  noReleaseYet: false,
+  feedHasRelease: false,
   lastCheckedAt: null,
   dismissed: false,
   autoCheck: true,
@@ -87,8 +101,35 @@ export function selectHasPendingUpdate(state: Pick<UpdateState, 'availableVersio
   return state.availableVersion !== null;
 }
 
+/**
+ * The updater plugin's `ReleaseNotFound` message: the feed answered with a
+ * non-success status. Before the first release that is GitHub's 404 for
+ * `releases/latest/download/latest.json`; afterwards it can only be an outage
+ * (a 5xx, a proxy's 403), which is why `feedHasRelease` decides between the two.
+ * Network failures raise a different error.
+ */
+const RELEASE_NOT_FOUND = 'Could not fetch a valid release JSON from the remote';
+
+/** Plugin errors cross IPC as plain strings, not `Error` instances. */
+export function isReleaseNotFound(error: unknown): boolean {
+  const message = typeof error === 'string' ? error : error instanceof Error ? error.message : '';
+  return message.includes(RELEASE_NOT_FOUND);
+}
+
 function errorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string' && error) return error; // plugin errors cross IPC as strings
   return error instanceof Error ? error.message : fallback;
+}
+
+/** State for a feed that answered but has never offered a release. */
+function noReleaseState() {
+  return {
+    availableVersion: null,
+    update: null,
+    dismissed: false,
+    noReleaseYet: true,
+    lastCheckedAt: Date.now(),
+  };
 }
 
 export const useUpdateStore = create<UpdateState>()(
@@ -115,6 +156,8 @@ export const useUpdateStore = create<UpdateState>()(
                   : true
                 : false,
               isChecking: false,
+              noReleaseYet: false,
+              feedHasRelease: true,
               lastCheckedAt: checkedAt,
             });
           } else {
@@ -123,10 +166,19 @@ export const useUpdateStore = create<UpdateState>()(
               update: null,
               dismissed: false,
               isChecking: false,
+              noReleaseYet: false,
+              feedHasRelease: true,
               lastCheckedAt: checkedAt,
             });
           }
         } catch (error) {
+          if (isReleaseNotFound(error) && !get().feedHasRelease) {
+            // An answered check of an empty feed: record it, so window focus
+            // doesn't re-check until the interval has passed, and show no
+            // error. A pending version can't be real when no release exists.
+            set({ ...noReleaseState(), isChecking: false });
+            return;
+          }
           console.error(
             silent
               ? '[updateStore] Automatic update check failed:'
@@ -176,7 +228,13 @@ export const useUpdateStore = create<UpdateState>()(
             // Persisted metadata survives a relaunch, but the updater handle
             // cannot. Re-check only when needed to recover an installable handle.
             if (!update) {
-              update = await check();
+              try {
+                update = await check();
+              } catch (error) {
+                if (!isReleaseNotFound(error) || get().feedHasRelease) throw error;
+                set({ ...noReleaseState(), downloading: false });
+                return;
+              }
               const checkedAt = Date.now();
               if (!update) {
                 set({
@@ -184,6 +242,8 @@ export const useUpdateStore = create<UpdateState>()(
                   update: null,
                   dismissed: false,
                   downloading: false,
+                  noReleaseYet: false,
+                  feedHasRelease: true,
                   lastCheckedAt: checkedAt,
                 });
                 return;
@@ -191,6 +251,8 @@ export const useUpdateStore = create<UpdateState>()(
               set({
                 availableVersion: update.version,
                 update,
+                noReleaseYet: false,
+                feedHasRelease: true,
                 lastCheckedAt: checkedAt,
               });
             }
@@ -282,6 +344,8 @@ export const useUpdateStore = create<UpdateState>()(
         lastCheckedAt: state.lastCheckedAt,
         dismissed: state.dismissed,
         autoCheck: state.autoCheck,
+        noReleaseYet: state.noReleaseYet,
+        feedHasRelease: state.feedHasRelease,
       }),
     }
   )

@@ -21,7 +21,7 @@ import { isMobilePlatform } from '@/lib/platform';
 import { useLaunchContextStore, wasLaunchedWithFile } from '@/lib/launchContext';
 import { CloseButton } from '@/components/ui/CloseButton';
 
-const RELEASES_URL = 'https://github.com/mauropereiira/Moldavite/releases';
+const RELEASES_URL = 'https://github.com/jiegui2025/larimar/releases';
 
 export function WhatsNewModal() {
   const { isOpen, entry, open, close, markSeen } = useWhatsNewStore();

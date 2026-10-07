@@ -19,6 +19,7 @@ function SoftwareUpdates() {
   const {
     availableVersion,
     isChecking,
+    noReleaseYet,
     lastCheckedAt,
     error,
     checkForUpdate,
@@ -39,6 +40,11 @@ function SoftwareUpdates() {
               <span className="settings-ok">Update available: v{availableVersion}</span>
             ) : isChecking ? (
               'Checking for updates...'
+            ) : noReleaseYet ? (
+              <>
+                No releases published yet
+                {lastCheckedAt && `. Last checked ${new Date(lastCheckedAt).toLocaleString()}`}
+              </>
             ) : (
               <>
                 You&apos;re up to date
@@ -54,7 +60,7 @@ function SoftwareUpdates() {
             <button
               type="button"
               className="settings-link pad-hover"
-              onClick={() => shellOpen('https://github.com/mauropereiira/Moldavite/releases')}
+              onClick={() => shellOpen('https://github.com/jiegui2025/larimar/releases')}
             >
               <ExternalLink aria-hidden="true" className="w-3 h-3" />
               View releases on GitHub

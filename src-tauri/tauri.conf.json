@@ -59,9 +59,9 @@
       }
     },
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQxOTIwNjQ3RkVDOUM3MUMKUldRY3g4bitSd2FTMFFONjV0WWhjT3ErS2lqbHB3bDFYREtXVnFmeDlGS2NTZDVOeU5IaS9Ma0wK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE2NjQ2MUQxM0FCMkZCNUYKUldSZis3STYwV0ZrRmprb3dEMy9ray9DS1IzaVduSUw3OTNaKzE1QjFzTGVYa2hDdFlWdDU5YkQK",
       "endpoints": [
-        "https://github.com/mauropereiira/Moldavite/releases/latest/download/latest.json"
+        "https://github.com/jiegui2025/larimar/releases/latest/download/latest.json"
       ]
     }
   },

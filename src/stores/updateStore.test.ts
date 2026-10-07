@@ -12,6 +12,7 @@ import {
   UPDATE_CHECK_INTERVAL_MS,
   __resetUpdateStoreForTests,
   isNewerVersion,
+  isReleaseNotFound,
   isUpdateCheckStale,
   selectHasPendingUpdate,
   useUpdateStore,
@@ -85,6 +86,8 @@ describe('updateStore', () => {
       lastCheckedAt: 1234,
       dismissed: true,
       autoCheck: true,
+      noReleaseYet: false,
+      feedHasRelease: false,
     });
   });
 
@@ -114,7 +117,7 @@ describe('updateStore', () => {
 
   it('logs automatic failures without surfacing an error or advancing lastCheckedAt', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    mockCheck.mockRejectedValue(new Error('404 latest.json'));
+    mockCheck.mockRejectedValue(new Error('error sending request'));
 
     await useUpdateStore.getState().checkForUpdateSilently();
 
@@ -135,6 +138,106 @@ describe('updateStore', () => {
     expect(consoleError).toHaveBeenCalled();
     expect(useUpdateStore.getState().error).toBe('Could not reach update server');
     expect(useUpdateStore.getState().lastCheckedAt).toBeNull();
+  });
+
+  it('recognises the updater plugin’s release-not-found message, string or Error', () => {
+    const message = 'Could not fetch a valid release JSON from the remote';
+
+    expect(isReleaseNotFound(message)).toBe(true);
+    expect(isReleaseNotFound(new Error(message))).toBe(true);
+    expect(isReleaseNotFound('error sending request for url')).toBe(false);
+    expect(isReleaseNotFound(undefined)).toBe(false);
+  });
+
+  it('surfaces a plugin error string, which crosses IPC without an Error wrapper', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockCheck.mockRejectedValue('error sending request for url');
+
+    await useUpdateStore.getState().checkForUpdate();
+
+    expect(useUpdateStore.getState().error).toBe('error sending request for url');
+    expect(useUpdateStore.getState().noReleaseYet).toBe(false);
+    expect(useUpdateStore.getState().lastCheckedAt).toBeNull();
+  });
+
+  it('reports a feed with no release yet as answered, not as an error', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    useUpdateStore.setState({ availableVersion: '1.8.0' });
+    // Plugin errors cross IPC as strings; this is what a 404 feed produces.
+    mockCheck.mockRejectedValue('Could not fetch a valid release JSON from the remote');
+
+    await useUpdateStore.getState().checkForUpdate();
+
+    const state = useUpdateStore.getState();
+    expect(state.noReleaseYet).toBe(true);
+    expect(state.error).toBeNull();
+    expect(state.availableVersion).toBeNull();
+    expect(state.lastCheckedAt).not.toBeNull();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it('treats release-not-found as an outage once the feed has offered a release', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    useUpdateStore.setState({ feedHasRelease: true, availableVersion: '1.8.0' });
+    mockCheck.mockRejectedValue('Could not fetch a valid release JSON from the remote');
+
+    await useUpdateStore.getState().checkForUpdateSilently();
+
+    const state = useUpdateStore.getState();
+    expect(state.noReleaseYet).toBe(false);
+    expect(state.availableVersion).toBe('1.8.0');
+    expect(state.lastCheckedAt).toBeNull();
+  });
+
+  it('records that the feed has offered a release after any successful check', async () => {
+    mockCheck.mockResolvedValue(null);
+
+    await useUpdateStore.getState().checkForUpdateSilently();
+
+    expect(useUpdateStore.getState().feedHasRelease).toBe(true);
+  });
+
+  it('settles a stale pending version when the install re-check finds no release', async () => {
+    useUpdateStore.setState({ availableVersion: '1.8.0', update: null });
+    mockCheck.mockRejectedValue('Could not fetch a valid release JSON from the remote');
+
+    await useUpdateStore.getState().installUpdate();
+
+    const state = useUpdateStore.getState();
+    expect(state.availableVersion).toBeNull();
+    expect(state.noReleaseYet).toBe(true);
+    expect(state.downloading).toBe(false);
+    expect(state.error).toBeNull();
+    expect(mockRelaunch).not.toHaveBeenCalled();
+  });
+
+  it('keeps the no-release state across a relaunch', () => {
+    useUpdateStore.setState({ noReleaseYet: true, lastCheckedAt: 1234 });
+
+    const persisted = JSON.parse(localStorage.getItem('moldavite-updates') || '{}');
+    expect(persisted.state.noReleaseYet).toBe(true);
+  });
+
+  it('stops re-checking on focus after a feed with no release yet answered', async () => {
+    vi.useFakeTimers();
+    mockCheck.mockRejectedValue('Could not fetch a valid release JSON from the remote');
+    await useUpdateStore.getState().checkForUpdateSilently();
+    mockCheck.mockClear();
+
+    const stop = useUpdateStore.getState().startPeriodicChecks();
+    window.dispatchEvent(new Event('focus'));
+    stop();
+
+    expect(mockCheck).not.toHaveBeenCalled();
+  });
+
+  it('clears the no-release state once a check succeeds', async () => {
+    useUpdateStore.setState({ noReleaseYet: true });
+    mockCheck.mockResolvedValue(null);
+
+    await useUpdateStore.getState().checkForUpdate();
+
+    expect(useUpdateStore.getState().noReleaseYet).toBe(false);
   });
 
   it('keeps the explicit notification path for a successful manual check', async () => {
