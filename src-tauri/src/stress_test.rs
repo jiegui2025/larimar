@@ -30,13 +30,18 @@ pub(crate) const REGRESSION_BUDGET_SECS: u64 = 120;
 /// run, and asserts a ratio against that. Load slows both halves together, so
 /// the ratio holds on a loaded runner while still failing on the
 /// order-of-magnitude regressions these tests exist to catch. The measured
-/// ratios sit between 1.3 and 1.6 (and near 0.01 for the index versus the
-/// scan), so this leaves well over a decimal order of headroom.
+/// medians on a Linux desktop, idle or loaded, sit between 1.2 and 2.4 for
+/// the search and between 2.0 and 3.3 for the link rewrite, so this leaves six
+/// times headroom or more. The index-versus-scan check has its own bar,
+/// [`INDEX_SPEEDUP_FLOOR`].
+///
+/// Both sides of every ratio are medians of interleaved runs, never single
+/// samples: see [`interleaved_medians`].
 const SAME_RUN_RATIO_LIMIT: f64 = 20.0;
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::commands::search::search_notes_content_in;
 use crate::persist::write_atomic;
@@ -86,6 +91,48 @@ fn lorem_note(i: usize, with_needle: bool) -> String {
     s
 }
 
+/// Wall-clock time of one call.
+fn timed(op: impl FnOnce()) -> Duration {
+    let started = Instant::now();
+    op();
+    started.elapsed()
+}
+
+fn median(mut samples: Vec<Duration>) -> Duration {
+    debug_assert!(samples.len() % 2 == 1, "an odd count has a true median");
+    samples.sort_unstable();
+    samples[samples.len() / 2]
+}
+
+/// Median times of `baseline` and `measured`, after one untimed warm-up of
+/// `measured`, over `rounds` rounds of one `baseline` run followed by
+/// `measured_per_round` runs of `measured`.
+///
+/// A single sample is at the mercy of the scheduler: on a shared CI runner one
+/// stall of a few tens of milliseconds inside an operation that takes a few
+/// milliseconds reads as a tenfold slowdown, the likely cause of the
+/// index-versus-scan failure on a macOS runner (issue #26). A median needs most samples to be slow before it
+/// moves. Interleaving puts both halves of a ratio under the same load, so a
+/// burst from a parallel test lands on both sides rather than on whichever one
+/// happened to be measuring.
+fn interleaved_medians(
+    rounds: usize,
+    measured_per_round: usize,
+    mut baseline: impl FnMut(),
+    mut measured: impl FnMut(),
+) -> (Duration, Duration) {
+    measured();
+    let mut baseline_times = Vec::with_capacity(rounds);
+    let mut measured_times = Vec::with_capacity(rounds * measured_per_round);
+    for _ in 0..rounds {
+        baseline_times.push(timed(&mut baseline));
+        for _ in 0..measured_per_round {
+            measured_times.push(timed(&mut measured));
+        }
+    }
+    (median(baseline_times), median(measured_times))
+}
+
 #[test]
 fn stress_search_over_1000_note_vault() {
     let vault = TempVault::new("search");
@@ -102,32 +149,35 @@ fn stress_search_over_1000_note_vault() {
     }
 
     // Same-run floor: every note read once, which is the irreducible work the
-    // search has to do. Running it first means the search meets a warm page
-    // cache, so the ratio below is if anything pessimistic.
-    let started = Instant::now();
-    let mut baseline_bytes = 0usize;
-    for i in 0..1000 {
-        let dir = if i % 5 == 0 {
-            "notes/Projects"
-        } else {
-            "notes"
-        };
-        baseline_bytes += fs::read_to_string(base.join(dir).join(format!("note-{i}.md")))
-            .unwrap()
-            .len();
-    }
-    let read_all = started.elapsed();
-    assert!(baseline_bytes > 0);
+    // search has to do. Both run against the same warm page cache.
+    let (read_all, elapsed) = interleaved_medians(
+        5,
+        1,
+        || {
+            let mut baseline_bytes = 0usize;
+            for i in 0..1000 {
+                let dir = if i % 5 == 0 {
+                    "notes/Projects"
+                } else {
+                    "notes"
+                };
+                baseline_bytes += fs::read_to_string(base.join(dir).join(format!("note-{i}.md")))
+                    .unwrap()
+                    .len();
+            }
+            assert!(baseline_bytes > 0);
+        },
+        || {
+            let results =
+                search_notes_content_in(base, &base.join(".trash"), "moldavite-needle", 50);
+            assert_eq!(results.len(), 10, "expected exactly the 10 seeded matches");
+        },
+    );
 
-    let started = Instant::now();
-    let results = search_notes_content_in(base, &base.join(".trash"), "moldavite-needle", 50);
-    let elapsed = started.elapsed();
-
-    assert_eq!(results.len(), 10, "expected exactly the 10 seeded matches");
     let ratio = elapsed.as_secs_f64() / read_all.as_secs_f64();
     eprintln!(
         "[stress] search over 1000 notes took {elapsed:?}; reading them all took {read_all:?} \
-         (ratio {ratio:.2})"
+         (medians, ratio {ratio:.2})"
     );
     assert!(
         ratio < SAME_RUN_RATIO_LIMIT,
@@ -161,25 +211,15 @@ fn stress_index_versus_scan(note_count: usize) {
     }
     let expected = note_count.div_ceil(100);
 
-    let started = Instant::now();
-    let scanned = crate::commands::search::scan_notes_content_in(
-        base,
-        &base.join(".trash"),
-        "moldavite-needle",
-        500,
-    );
-    let scan_query = started.elapsed();
-    assert_eq!(scanned.len(), expected);
-
+    // The cold build is the one asserted measurement taken once: repeating it
+    // means dropping and rebuilding the whole index, most of this test's
+    // runtime. It keeps a fixed ceiling instead of a ratio. Measured: 2.6 s on
+    // a Linux desktop, up to 13 s pinned to three loaded CPUs, 3.5 s on a
+    // macOS runner; 60 s still catches a regression of about twentyfold.
     let started = Instant::now();
     let indexed_count = crate::search_index::reconcile(base).unwrap();
     let reconcile_time = started.elapsed();
     assert_eq!(indexed_count as usize, note_count);
-
-    let started = Instant::now();
-    let hits = crate::search_index::query(base, base, "moldavite-needle", 500).unwrap();
-    let index_query = started.elapsed();
-    assert_eq!(hits.len(), expected);
 
     // A no-op reconcile is the common case: nothing changed, so every note
     // should be settled by its `(mtime, size)` alone.
@@ -187,9 +227,31 @@ fn stress_index_versus_scan(note_count: usize) {
     crate::search_index::reconcile(base).unwrap();
     let warm_reconcile = started.elapsed();
 
+    // Three scans, each followed by three index queries: a scan costs as much
+    // as twenty-odd queries, so the index gets the extra samples cheaply.
+    let (scan_query, index_query) = interleaved_medians(
+        3,
+        3,
+        || {
+            let scanned = crate::commands::search::scan_notes_content_in(
+                base,
+                &base.join(".trash"),
+                "moldavite-needle",
+                500,
+            );
+            assert_eq!(scanned.len(), expected);
+        },
+        || {
+            let hits = crate::search_index::query(base, base, "moldavite-needle", 500).unwrap();
+            assert_eq!(hits.len(), expected);
+        },
+    );
+
+    let speedup = scan_query.as_secs_f64() / index_query.as_secs_f64();
     eprintln!(
-        "[stress] {note_count} notes — scan query {scan_query:?}, index query {index_query:?}, \
-         cold reconcile {reconcile_time:?}, warm reconcile {warm_reconcile:?}"
+        "[stress] {note_count} notes — scan query {scan_query:?}, index query {index_query:?} \
+         (medians, {speedup:.1}x), cold reconcile {reconcile_time:?}, warm reconcile \
+         {warm_reconcile:?}"
     );
     crate::search_index::delete_for(base);
 
@@ -198,15 +260,36 @@ fn stress_index_versus_scan(note_count: usize) {
     // there to be an order of magnitude faster than walking the Forge; that is
     // the claim, and it is the one worth failing on.
     assert!(
-        index_query.as_secs_f64() * 10.0 < scan_query.as_secs_f64(),
+        speedup > INDEX_SPEEDUP_FLOOR,
         "index query over {note_count} notes took {index_query:?} against a {scan_query:?} scan \
-         — the index is no longer an order of magnitude faster"
+         (medians, {speedup:.1}x) — the index is no longer an order of magnitude faster"
     );
     assert!(
         reconcile_time.as_secs() < 60,
         "reconcile of {note_count} notes took {reconcile_time:?}"
     );
 }
+
+/// How many times faster than the scan the index query has to be, comparing
+/// the medians from [`interleaved_medians`].
+///
+/// Measured over 10,000 notes in the debug build `cargo test` runs, scan
+/// median divided by index median (2026-10):
+///
+/// - Linux, 6-core desktop: 27-34x over 10 runs.
+/// - The same with twelve busy loops on its six cores: 21-34x over 30.
+/// - Pinned to 3 CPUs, a macOS runner's count, beside a looping full `cargo
+///   test --lib` and two busy loops: 19-40x over 60. The scan there takes
+///   120-460 ms, around the runner's 359 ms.
+/// - The same pinned to 2 CPUs: 24-30x over 30.
+/// - macOS runner: medians not yet logged (CI hides a passing test's output;
+///   issue #26 tracks collecting them). The one figure is the single sample
+///   this replaced: 6.7x (scan 359 ms, index 54 ms). On the 3-CPU set-up single samples fell as low as
+///   8.7x, failing 1 run in 60, while the medians never went below 19x.
+///
+/// The lowest median, 19x, still clears the bar about twice over, so CI keeps
+/// the same bar as a laptop. A query that lost its index scores about 1x.
+const INDEX_SPEEDUP_FLOOR: f64 = 10.0;
 
 #[test]
 fn stress_index_versus_scan_over_10000_note_vault() {
@@ -313,29 +396,34 @@ fn stress_rewrite_links_across_large_corpus() {
     // 500 notes, each with 9 links; rewrite one target across all of them.
     let corpus: Vec<String> = (0..500).map(|i| lorem_note(i, false)).collect();
 
-    let started = Instant::now();
-    let mut found = 0usize;
-    for content in &corpus {
-        found += crate::wiki::parse_wiki_links(content).len();
-    }
-    let parse_all = started.elapsed();
-    assert!(found > 0);
-
-    let started = Instant::now();
     let mut touched = 0;
-    for content in &corpus {
-        if let Some(rewritten) = rewrite_links_for_rename(content, "note-42", "renamed-note", false)
-        {
-            assert!(rewritten.contains("[[renamed-note]]"));
-            assert!(!rewritten.contains("[[note-42]]"));
-            touched += 1;
-        }
-    }
-    let elapsed = started.elapsed();
+    let (parse_all, elapsed) = interleaved_medians(
+        5,
+        1,
+        || {
+            let mut found = 0usize;
+            for content in &corpus {
+                found += crate::wiki::parse_wiki_links(content).len();
+            }
+            assert!(found > 0);
+        },
+        || {
+            touched = 0;
+            for content in &corpus {
+                if let Some(rewritten) =
+                    rewrite_links_for_rename(content, "note-42", "renamed-note", false)
+                {
+                    assert!(rewritten.contains("[[renamed-note]]"));
+                    assert!(!rewritten.contains("[[note-42]]"));
+                    touched += 1;
+                }
+            }
+        },
+    );
     let ratio = elapsed.as_secs_f64() / parse_all.as_secs_f64();
     eprintln!(
         "[stress] link rewrite across 500 notes took {elapsed:?} ({touched} touched); parsing \
-         the same links took {parse_all:?} (ratio {ratio:.2})"
+         the same links took {parse_all:?} (medians, ratio {ratio:.2})"
     );
     // note i links to (i+para)%1000 for para 0..8 — several notes link to 42.
     assert!(touched > 0, "expected at least one note to link to note-42");
