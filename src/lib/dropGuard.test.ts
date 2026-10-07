@@ -32,7 +32,7 @@ describe('installWindowDropGuard', () => {
   });
 
   it('leaves drags that carry no files to the app', () => {
-    const over = dragEvent('dragover', ['text/plain', 'application/x-moldavite-note']);
+    const over = dragEvent('dragover', ['text/plain', 'application/x-larimar-note']);
     const drop = dragEvent('drop', ['text/plain']);
 
     document.body.dispatchEvent(over);

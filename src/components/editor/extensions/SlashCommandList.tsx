@@ -127,7 +127,7 @@ export const slashCommands: SlashCommandItem[] = [
       // data URL instead of a file in the Forge's `images/` folder with a link
       // to it. The dialog already does it properly, so there is one way to
       // insert an image rather than two that disagree.
-      window.dispatchEvent(new window.CustomEvent('moldavite:open-image-dialog'));
+      window.dispatchEvent(new window.CustomEvent('larimar:open-image-dialog'));
     },
   },
 ];

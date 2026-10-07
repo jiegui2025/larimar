@@ -208,8 +208,8 @@ export function Editor() {
     const open = () => {
       if (!isLooseNote(useNoteStore.getState().currentNote)) setIsImageModalOpen(true);
     };
-    window.addEventListener('moldavite:open-image-dialog', open);
-    return () => window.removeEventListener('moldavite:open-image-dialog', open);
+    window.addEventListener('larimar:open-image-dialog', open);
+    return () => window.removeEventListener('larimar:open-image-dialog', open);
   }, []);
   const [linkInitialValues, setLinkInitialValues] = useState({ url: '', text: '' });
 

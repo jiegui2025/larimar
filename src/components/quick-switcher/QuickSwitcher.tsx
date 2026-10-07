@@ -575,7 +575,7 @@ export function QuickSwitcher() {
           return;
         case 'switch-forge':
           // Sidebar listens for this event and opens the Forge dropdown.
-          window.dispatchEvent(new Event('moldavite:open-forge-switcher'));
+          window.dispatchEvent(new Event('larimar:open-forge-switcher'));
           return;
         case 'open-graph':
           openGraph();

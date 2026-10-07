@@ -46,7 +46,7 @@ function postToWebView2(files: File[]): string | null {
   if (typeof webview?.postMessageWithAdditionalObjects !== 'function') return null;
   const token = randomHexId();
   try {
-    webview.postMessageWithAdditionalObjects({ moldaviteDrop: token }, files);
+    webview.postMessageWithAdditionalObjects({ larimarDrop: token }, files);
     return token;
   } catch (error) {
     console.error('[droppedFiles] WebView2 refused the dropped files:', error);

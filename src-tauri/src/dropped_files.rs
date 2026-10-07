@@ -200,7 +200,7 @@ impl DropReports {
 fn drop_token(message_json: &str) -> Option<String> {
     #[derive(Deserialize)]
     struct DropMessage {
-        #[serde(rename = "moldaviteDrop")]
+        #[serde(rename = "larimarDrop")]
         token: String,
     }
     let token = serde_json::from_str::<DropMessage>(message_json)
@@ -733,19 +733,19 @@ mod tests {
     #[test]
     fn a_drop_token_is_read_only_from_the_drop_message() {
         assert_eq!(
-            drop_token(r#"{"moldaviteDrop":"0b8e7c1a-2f4d-4e55-9a10-3c2d1e0f9a8b"}"#),
+            drop_token(r#"{"larimarDrop":"0b8e7c1a-2f4d-4e55-9a10-3c2d1e0f9a8b"}"#),
             Some("0b8e7c1a-2f4d-4e55-9a10-3c2d1e0f9a8b".to_string())
         );
         for message in [
-            r#""moldaviteDrop""#,
+            r#""larimarDrop""#,
             r#"{"cmd":"read_note"}"#,
-            r#"{"moldaviteDrop":""}"#,
-            r#"{"moldaviteDrop":"../../etc"}"#,
-            r#"{"moldaviteDrop":7}"#,
+            r#"{"larimarDrop":""}"#,
+            r#"{"larimarDrop":"../../etc"}"#,
+            r#"{"larimarDrop":7}"#,
         ] {
             assert_eq!(drop_token(message), None, "{message}");
         }
-        let long = format!(r#"{{"moldaviteDrop":"{}"}}"#, "a".repeat(65));
+        let long = format!(r#"{{"larimarDrop":"{}"}}"#, "a".repeat(65));
         assert_eq!(drop_token(&long), None);
     }
 
