@@ -4,16 +4,14 @@ use std::path::Path;
 
 #[cfg(target_os = "macos")]
 use crate::file_coordination as native;
-#[cfg(target_os = "ios")]
-use tauri_plugin_icloud::coordination as native;
 
 pub(crate) fn read<T: Send>(
     path: &Path,
     operation: impl FnOnce(&Path) -> Result<T, String> + Send,
 ) -> Result<T, String> {
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     return native::read_cloud(path, operation);
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(target_os = "macos"))]
     operation(path)
 }
 
@@ -21,9 +19,9 @@ pub(crate) fn write<T: Send>(
     path: &Path,
     operation: impl FnOnce(&Path) -> Result<T, String> + Send,
 ) -> Result<T, String> {
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     return native::write_cloud(path, operation);
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(target_os = "macos"))]
     operation(path)
 }
 
@@ -73,7 +71,7 @@ pub(crate) fn transaction<T: Send>(
     requests: &[Access<'_>],
     operation: impl FnOnce() -> Result<T, String> + Send,
 ) -> Result<T, String> {
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     {
         let json = serde_json::to_string(requests).map_err(|error| error.to_string())?;
         native::transaction(&json, false, |paths| {
@@ -90,7 +88,7 @@ pub(crate) fn transaction<T: Send>(
             operation()
         })
     }
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(target_os = "macos"))]
     {
         let _ = requests;
         operation()

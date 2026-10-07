@@ -141,10 +141,8 @@ fn open_atomic_temp(
 /// time would be its last save and the Index's Created sort would mean Modified.
 /// Best effort: a save never fails over a timestamp. Linux has no call that sets
 /// a birth time, so there it stays the time of the last save.
-#[cfg(any(target_os = "macos", target_os = "ios", windows))]
+#[cfg(any(target_os = "macos", windows))]
 fn keep_created(file: &fs::File, created: Option<std::time::SystemTime>) {
-    #[cfg(target_os = "ios")]
-    use std::os::ios::fs::FileTimesExt;
     #[cfg(target_os = "macos")]
     use std::os::macos::fs::FileTimesExt;
     #[cfg(windows)]
@@ -154,7 +152,7 @@ fn keep_created(file: &fs::File, created: Option<std::time::SystemTime>) {
     }
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios", windows)))]
+#[cfg(not(any(target_os = "macos", windows)))]
 fn keep_created(_file: &fs::File, _created: Option<std::time::SystemTime>) {}
 
 #[cfg(target_os = "macos")]

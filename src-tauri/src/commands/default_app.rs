@@ -4,8 +4,8 @@
 //! 11 do not let an app make itself the default, so the command opens the
 //! Default Apps page and the status stays unknown. Linux sets it with
 //! `xdg-mime` for the installed `.desktop` entry that launches this binary;
-//! an AppImage has no installed entry, so it reports `Unsupported` like iOS
-//! and the UI hides the control.
+//! an AppImage has no installed entry, so it reports `Unsupported`, as the
+//! platforms not named here do, and the UI hides the control.
 
 use serde::Serialize;
 

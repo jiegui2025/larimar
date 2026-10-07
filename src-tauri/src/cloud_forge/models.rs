@@ -1,11 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-#[cfg(target_os = "ios")]
-#[derive(Debug, Deserialize)]
-pub struct Container {
-    pub path: String,
-}
-
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum DownloadState {
@@ -33,7 +27,7 @@ pub struct CloudItem {
     pub modified: Option<f64>,
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios", test))]
+#[cfg(any(target_os = "macos", test))]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum ChangeKind {
@@ -42,7 +36,7 @@ pub enum ChangeKind {
     AccountChanged,
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios", test))]
+#[cfg(any(target_os = "macos", test))]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CloudChange {
     pub kind: ChangeKind,

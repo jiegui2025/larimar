@@ -12,8 +12,8 @@ unsigned Windows and Linux builds (an AppImage, a deb and an rpm) via GitHub Act
 including Windows, are signed with `TAURI_SIGNING_PRIVATE_KEY` so the updater can
 verify their integrity. Windows installers are not Authenticode-signed, so
 Windows may show a SmartScreen warning, and Linux bundles are unsigned as well. This is the
-end-to-end release process. The iPhone and iPad app is built locally and
-uploaded to App Store Connect instead; see [IOS_APP_STORE.md](IOS_APP_STORE.md).
+end-to-end release process. The upstream iPhone and iPad app is archived and
+not released from `main`; see [archive/tauri-ios.md](archive/tauri-ios.md).
 
 ## 1. Prepare the release branch
 
@@ -280,8 +280,8 @@ waiting on a keychain prompt that never comes in a headless runner
 ([tauri-action#941](https://github.com/tauri-apps/tauri-action/issues/941)).
 That is what hung the aarch64 build of v1.6.0.
 
-The app initializes the same native container as iOS when a user enables
-Settings → General → Synced Forge (iCloud). No iPhone installation is required.
+The app initializes the iCloud container when a user enables
+Settings → General → Synced Forge (iCloud).
 Local Forges are not moved. Once connected, “Open synced folder in Finder” opens
 its Documents directory; Markdown files belong in `notes/`. Enable the synced
 Forge on other Apple devices signed into the same iCloud account to open it there.

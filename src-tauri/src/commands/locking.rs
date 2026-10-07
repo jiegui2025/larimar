@@ -1152,7 +1152,7 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
 
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     #[test]
     fn pending_lock_source_is_never_treated_as_missing_plaintext() {
         let root = temp_forge("pending-lock");

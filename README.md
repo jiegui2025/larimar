@@ -20,7 +20,7 @@ calendar, and a built-in MCP server for the AI tools you already use.
 No Moldavite account. No telemetry. Optional iCloud Drive sync on Mac. If Moldavite disappeared tomorrow,
 you would still have every note, in plain text, exactly where you left it.
 
-Local-first for macOS, iPhone and iPad, and for Windows and Linux in beta.
+Local-first for macOS, and for Windows and Linux in beta.
 
 ## Install
 
@@ -46,10 +46,6 @@ runtime sets that floor. Mark the AppImage executable once, and install
 `libfuse2` if your distribution does not ship it (`sudo apt install libfuse2`
 on Ubuntu). In-app updates work for the AppImage. The deb and the rpm are
 updated by installing the next one.
-
-**iPhone and iPad.** Get Moldavite: Notes & Ideas from the
-[App Store](https://apps.apple.com/app/id6809157286) (iOS and iPadOS 17 or
-later). The MCP server, plugins and the browser clipper stay on the desktop.
 
 ## Connect your AI
 
@@ -127,12 +123,12 @@ use Open With or ⌘O (Ctrl+O) to edit the original.
 In Moldavite 2.7.0 or later, open **Settings → General → Synced Forge (iCloud)** to
 create a separate iCloud Forge on your Mac. Write notes there or use **Open
 synced folder in Finder** to copy Markdown files into `notes/`. Your local
-Forges stay separate. You can start on Mac before installing the iOS app.
+Forges stay separate.
 Notes that are only in iCloud show a small cloud and download when you open
 them and tap **Download**.
 
 See [the Mac iCloud guide](docs/MAC_ICLOUD.md) for setup, adding existing notes,
-and troubleshooting. The full iOS guide will follow separately.
+and troubleshooting.
 
 ## What else it does
 
@@ -144,8 +140,8 @@ hides them), and the seasonal theme adds an autumn field and falling leaves (Sea
 them off).
 
 Wiki-links with vault-wide rename, backlinks, a graph view, tags, templates,
-Markdown tables you edit in place, daily and weekly notes, an Agenda with Apple and Google Calendar events on an hourly timeline (Apple on a Mac,
-iPhone and iPad; Google everywhere), a Timeline of what happened to your notes, note locking with AES-256-GCM, export to Markdown, PDF, a ZIP archive or
+Markdown tables you edit in place, daily and weekly notes, an Agenda with Apple and Google Calendar events on an hourly timeline (Apple on a Mac;
+Google everywhere), a Timeline of what happened to your notes, note locking with AES-256-GCM, export to Markdown, PDF, a ZIP archive or
 an encrypted archive, a one-time Obsidian importer that copies rather than
 moves, and sandboxed plugins that run in a Worker with no network unless you
 grant it. Plugins come from a community directory the maintainer reviews, or
@@ -209,6 +205,8 @@ is outside the supported range.
 
 MIT.
 
-### iOS development
+### iOS
 
-The iOS app is on the App Store as Moldavite: Notes & Ideas (not yet in France) and is still in development, with a phone layout, touch formatting controls and local-device onboarding. See [the mobile status and build guide](docs/MOBILE.md) for implemented features and remaining release work, and [the App Store handoff](docs/IOS_APP_STORE.md) for account setup and upload instructions.
+The upstream Tauri app for iPhone and iPad is archived, not built from `main`.
+[docs/archive/tauri-ios.md](docs/archive/tauri-ios.md) describes what the
+archive holds and how to restore it.

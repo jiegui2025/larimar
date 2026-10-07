@@ -34,7 +34,7 @@
 //! batch of events. Content hashes make full reconciles cheap: unchanged notes
 //! are never re-embedded.
 
-// Without `semantic_runtime` (Intel macOS, iOS) the embedder never runs, so
+// Without `semantic_runtime` (Intel macOS) the embedder never runs, so
 // its helpers are dead there by design.
 #![cfg_attr(not(semantic_runtime), allow(dead_code))]
 

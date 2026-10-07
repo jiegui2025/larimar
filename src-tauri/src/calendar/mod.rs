@@ -1,6 +1,6 @@
 //! Calendar events from more than one source, behind one shape.
 //!
-//! Apple (EventKit, macOS and iOS) and Google (REST, everywhere) have nothing in
+//! Apple (EventKit, macOS) and Google (REST, everywhere) have nothing in
 //! common structurally: one is a local FFI call with an OS permission, the
 //! other a remote API with an OAuth connection. This module owns what the rest
 //! of the app sees — a merged event list, per-source status, and per-source
@@ -10,7 +10,7 @@
 //! prefixed with its source here and split back apart here. Nothing above this
 //! boundary should ever parse an id.
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 pub mod apple;
 pub mod google;
 pub mod oauth;
@@ -18,7 +18,7 @@ pub mod oauth;
 use chrono::{Local, NaiveDate, TimeZone};
 use serde::{Deserialize, Serialize};
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 pub use apple::CalendarPermission;
 
 /// Windows and Linux still need the type so `CalendarSourceStatus` keeps one
@@ -26,7 +26,7 @@ pub use apple::CalendarPermission;
 /// `permission` is always `None` there. The variants exist to keep the wire
 /// format identical for the frontend's `CalendarPermission` union, so
 /// `dead_code` is expected rather than a sign of something unused.
-#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+#[cfg(not(target_os = "macos"))]
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum CalendarPermission {
@@ -187,7 +187,7 @@ fn http_client() -> reqwest::Client {
         .clone()
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 fn apple_status() -> CalendarSourceStatus {
     let permission = apple::get_permission_status();
     CalendarSourceStatus {
@@ -202,7 +202,7 @@ fn apple_status() -> CalendarSourceStatus {
     }
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+#[cfg(not(target_os = "macos"))]
 fn apple_status() -> CalendarSourceStatus {
     CalendarSourceStatus {
         source: CalendarSource::Apple,
@@ -216,7 +216,7 @@ fn apple_status() -> CalendarSourceStatus {
     }
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 fn apple_calendars() -> Result<Vec<CalendarInfo>, String> {
     Ok(apple::get_calendars()?
         .into_iter()
@@ -235,12 +235,12 @@ fn apple_calendars() -> Result<Vec<CalendarInfo>, String> {
         .collect())
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+#[cfg(not(target_os = "macos"))]
 fn apple_calendars() -> Result<Vec<CalendarInfo>, String> {
     Ok(Vec::new())
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 fn apple_events(
     start_date: &str,
     end_date: &str,
@@ -262,7 +262,7 @@ fn apple_events(
 }
 
 /// Keeps events in the `wanted` native calendars (all when `None`) and namespaces their ids.
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 fn apple_event_batch(raw: Vec<apple::RawEvent>, wanted: Option<&[&str]>) -> Vec<CalendarEvent> {
     raw.into_iter()
         .filter(|e| {
@@ -287,7 +287,7 @@ fn apple_event_batch(raw: Vec<apple::RawEvent>, wanted: Option<&[&str]>) -> Vec<
         .collect()
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+#[cfg(not(target_os = "macos"))]
 fn apple_events(
     _start_date: &str,
     _end_date: &str,
@@ -652,7 +652,7 @@ mod tests {
         assert!("2026-08-07T07:00:00Z" < "2026-08-07T09:00:00+03:00");
     }
 
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     fn raw_apple_event(id: &str, calendar_id: &str) -> apple::RawEvent {
         apple::RawEvent {
             id: id.into(),
@@ -669,7 +669,7 @@ mod tests {
         }
     }
 
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     #[test]
     fn apple_events_are_namespaced_and_narrowed_to_the_selection() {
         let raw = vec![
@@ -700,7 +700,7 @@ mod tests {
         assert!(source.contains("#available(macOS 14.0, iOS 17.0, *), status == .writeOnly"));
     }
 
-    /// The iOS package builds the bridge below iOS 17, where a macOS-only
+    /// `src-swift/Package.swift` also declares iOS 14, where a macOS-only
     /// `#available` fails to compile.
     #[test]
     fn swift_gates_full_access_on_both_platforms() {
