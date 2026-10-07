@@ -2814,6 +2814,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "larimar"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "argon2",
+ "base64 0.22.1",
+ "bincode",
+ "chrono",
+ "dirs 6.0.0",
+ "dunce",
+ "fastembed",
+ "keyring",
+ "lazy_static",
+ "libc",
+ "log",
+ "notify",
+ "notify-debouncer-mini",
+ "rand 0.8.8",
+ "regex",
+ "reqwest 0.12.24",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2",
+ "swift-rs",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-log",
+ "tauri-plugin-process",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "tauri-plugin-window-state",
+ "unicode-normalization",
+ "walkdir",
+ "webview2-com",
+ "windows-core",
+ "winreg 0.52.0",
+ "xattr",
+ "zeroize",
+ "zip 2.4.2",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3107,53 +3154,6 @@ dependencies = [
  "libc",
  "wasi 0.11.1+wasi-snapshot-preview1",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "moldavite"
-version = "2.11.0"
-dependencies = [
- "aes-gcm",
- "argon2",
- "base64 0.22.1",
- "bincode",
- "chrono",
- "dirs 6.0.0",
- "dunce",
- "fastembed",
- "keyring",
- "lazy_static",
- "libc",
- "log",
- "notify",
- "notify-debouncer-mini",
- "rand 0.8.8",
- "regex",
- "reqwest 0.12.24",
- "rusqlite",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2",
- "swift-rs",
- "tauri",
- "tauri-build",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-log",
- "tauri-plugin-process",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "tauri-plugin-window-state",
- "unicode-normalization",
- "walkdir",
- "webview2-com",
- "windows-core",
- "winreg 0.52.0",
- "xattr",
- "zeroize",
- "zip 2.4.2",
 ]
 
 [[package]]

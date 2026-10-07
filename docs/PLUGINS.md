@@ -131,7 +131,7 @@ self-contained ES module because Moldavite loads only this one entry file.
   "author": "Your Name",
   "description": "Publishes the active note to an approved service.",
   "apiVersion": 2,
-  "minAppVersion": "1.6.0",
+  "minAppVersion": "0.1.0",
   "permissions": ["editor", "ui", "notes.read", "net.fetch", "secrets"],
   "allowedHosts": ["api.example.com"],
   "commands": [
@@ -154,7 +154,7 @@ self-contained ES module because Moldavite loads only this one entry file.
 | `apiVersion`    |              yes | Use `2` for this API. Versions 1 and 2 are supported.                                                                                                                                                                     |
 | `author`        |               no | Display metadata.                                                                                                                                                                                                         |
 | `description`   |               no | Display metadata. Explain what the plugin does and where data may go.                                                                                                                                                     |
-| `minAppVersion` |               no | The oldest Moldavite version the plugin works with, such as `2.10.0`. Older versions show it as incompatible, do not run it, and refuse to install it from a file.                                                        |
+| `minAppVersion` |               no | The oldest Moldavite version the plugin works with, such as `0.1.0`. Older versions show it as incompatible, do not run it, and refuse to install it from a file.                                                         |
 | `permissions`   |               no | Supported capability strings from the permission table below. Registering commands needs `commands`.                                                                                                                      |
 | `allowedHosts`  | with `net.fetch` | Non-empty, unique array of exact lowercase public DNS hostnames. No scheme, port, path, IP, single-label name, localhost label, or wildcard.                                                                              |
 | `commands`      |               no | Up to 50 `{ "id", "label" }` entries shown before the plugin is enabled. Each id must match the id registered through `api.commands.add`; ids are limited to 128 characters and labels to 200. Duplicate ids are invalid. |

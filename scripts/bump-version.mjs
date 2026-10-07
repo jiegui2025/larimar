@@ -46,8 +46,8 @@ const manifests = [
     path: join(root, 'package.json'),
     readVersion(contents) {
       const value = parseJson(contents, this.label);
-      if (value.name !== 'moldavite' || !Object.hasOwn(value, 'version')) {
-        fail(`${this.label}: expected the moldavite root version field`);
+      if (value.name !== 'larimar' || !Object.hasOwn(value, 'version')) {
+        fail(`${this.label}: expected the larimar root version field`);
       }
       return assertVersion(value.version, this.label);
     },
@@ -65,12 +65,12 @@ const manifests = [
       const value = parseJson(contents, this.label);
       const rootPackage = value.packages?.[''];
       if (
-        value.name !== 'moldavite' ||
-        rootPackage?.name !== 'moldavite' ||
+        value.name !== 'larimar' ||
+        rootPackage?.name !== 'larimar' ||
         !Object.hasOwn(value, 'version') ||
         !Object.hasOwn(rootPackage, 'version')
       ) {
-        fail(`${this.label}: expected both moldavite root version fields`);
+        fail(`${this.label}: expected both larimar root version fields`);
       }
 
       const lockVersion = assertVersion(value.version, `${this.label} root`);
@@ -95,8 +95,8 @@ const manifests = [
     path: join(root, 'src-tauri', 'tauri.conf.json'),
     readVersion(contents) {
       const value = parseJson(contents, this.label);
-      if (value.productName !== 'Moldavite' || !Object.hasOwn(value, 'version')) {
-        fail(`${this.label}: expected the Moldavite root version field`);
+      if (value.productName !== 'Larimar' || !Object.hasOwn(value, 'version')) {
+        fail(`${this.label}: expected the Larimar root version field`);
       }
       return assertVersion(value.version, this.label);
     },
@@ -110,7 +110,7 @@ const manifests = [
   {
     label: 'src-tauri/Cargo.toml',
     path: join(root, 'src-tauri', 'Cargo.toml'),
-    pattern: /(\[package\]\r?\nname\s*=\s*"moldavite"\r?\nversion\s*=\s*")([^"\r\n]+)(")/g,
+    pattern: /(\[package\]\r?\nname\s*=\s*"larimar"\r?\nversion\s*=\s*")([^"\r\n]+)(")/g,
     readVersion(contents) {
       const matches = [...contents.matchAll(this.pattern)];
       if (matches.length !== 1) {
@@ -132,7 +132,7 @@ const manifests = [
   {
     label: 'src-tauri/Cargo.lock',
     path: join(root, 'src-tauri', 'Cargo.lock'),
-    pattern: /(\[\[package\]\]\r?\nname\s*=\s*"moldavite"\r?\nversion\s*=\s*")([^"\r\n]+)(")/g,
+    pattern: /(\[\[package\]\]\r?\nname\s*=\s*"larimar"\r?\nversion\s*=\s*")([^"\r\n]+)(")/g,
     readVersion(contents) {
       const matches = [...contents.matchAll(this.pattern)];
       if (matches.length !== 1) {

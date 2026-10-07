@@ -1,6 +1,6 @@
 {
-  "name": "moldavite",
-  "version": "2.11.0",
+  "name": "larimar",
+  "version": "0.1.0",
   "description": "A local-first note-taking app for connected thinking. Forged from cosmic impact.",
   "type": "module",
   "engines": {

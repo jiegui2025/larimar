@@ -280,9 +280,9 @@ mod tests {
     fn app_binary_path_prefers_the_appimage_file_over_the_mounted_exe() {
         // Built from temp_dir so the paths are absolute on every platform; a
         // Unix-rooted literal is relative on Windows and the fallback would win.
-        let mounted = std::env::temp_dir().join(".mount_MoldavAbc/usr/bin/moldavite");
+        let mounted = std::env::temp_dir().join(".mount_LarimaAbc/usr/bin/larimar");
         let appimage: OsString = std::env::temp_dir()
-            .join("Moldavite_2.5.0_amd64.AppImage")
+            .join("Larimar_0.1.0_amd64.AppImage")
             .into_os_string();
         assert_eq!(
             app_binary_path_from(Some(appimage.clone()), mounted.clone()),
