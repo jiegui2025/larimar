@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tauri-apps/api/app', () => ({ getVersion: mocks.getVersion }));
 vi.mock('@tauri-apps/plugin-shell', () => ({ open: mocks.shellOpen }));
 
-const RELEASES_URL = 'https://github.com/mauropereiira/Moldavite/releases';
+const RELEASES_URL = 'https://github.com/jiegui2025/larimar/releases';
 
 const ENTRY = {
   version: '1.9.0',
