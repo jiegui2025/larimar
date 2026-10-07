@@ -268,8 +268,8 @@ impl ForgeIndex {
             scrub(&conn)?;
             conn.execute_batch(SCHEMA_SQL).map_err(|e| e.to_string())?;
             // FTS5 otherwise keeps a deleted note's terms in its segments until
-            // they happen to be merged. Needs SQLite 3.44; the system SQLite on
-            // older iOS lacks it, and the page-level setting still applies.
+            // they happen to be merged. Needs SQLite 3.44; where it is missing,
+            // the page-level setting still applies.
             if let Err(error) = conn
                 .execute_batch("INSERT INTO notes_fts(notes_fts, rank) VALUES('secure-delete', 1);")
             {

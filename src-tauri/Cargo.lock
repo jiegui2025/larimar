@@ -3138,13 +3138,9 @@ dependencies = [
  "swift-rs",
  "tauri",
  "tauri-build",
- "tauri-plugin-calendar",
  "tauri-plugin-deep-link",
  "tauri-plugin-dialog",
- "tauri-plugin-document-export",
- "tauri-plugin-icloud",
  "tauri-plugin-log",
- "tauri-plugin-mobile-ui",
  "tauri-plugin-process",
  "tauri-plugin-shell",
  "tauri-plugin-single-instance",
@@ -5815,16 +5811,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-calendar"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
-]
-
-[[package]]
 name = "tauri-plugin-deep-link"
 version = "2.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5864,16 +5850,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-document-export"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
-]
-
-[[package]]
 name = "tauri-plugin-fs"
 version = "2.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5896,16 +5872,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-icloud"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
-]
-
-[[package]]
 name = "tauri-plugin-log"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5925,16 +5891,6 @@ dependencies = [
  "tauri-plugin",
  "thiserror 2.0.17",
  "time",
-]
-
-[[package]]
-name = "tauri-plugin-mobile-ui"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin",
 ]
 
 [[package]]

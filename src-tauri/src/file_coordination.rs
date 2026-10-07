@@ -124,7 +124,7 @@ where
     }
 }
 
-#[cfg(any(test, target_os = "ios"))]
+#[cfg(test)]
 pub fn read<T, F>(path: &Path, operation: F) -> Result<T, String>
 where
     F: FnOnce(&Path) -> Result<T, String> + Send,
@@ -133,7 +133,7 @@ where
     coordinate(path, false, false, operation)
 }
 
-#[cfg(any(test, target_os = "ios"))]
+#[cfg(test)]
 pub fn write<T, F>(path: &Path, operation: F) -> Result<T, String>
 where
     F: FnOnce(&Path) -> Result<T, String> + Send,

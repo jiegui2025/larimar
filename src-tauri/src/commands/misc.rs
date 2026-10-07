@@ -19,8 +19,9 @@ use std::sync::Arc;
 use tauri::State;
 use walkdir::WalkDir;
 
-/// Public help destinations only. The shell plugin's JS command uses its
-/// desktop opener even on iOS; its Rust method dispatches to UIApplication.
+/// Public help destinations only, for mobile targets (none is built since the
+/// iOS app was archived). Opened from Rust: the shell plugin's JS command uses
+/// its desktop opener even on a phone.
 #[cfg(mobile)]
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]

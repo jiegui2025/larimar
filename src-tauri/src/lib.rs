@@ -14,7 +14,7 @@
 //! - Unlock attempts are rate limited in-process; a copied `.locked` file is
 //!   protected only by Argon2id and the password itself
 
-/// Calendar integration: Apple (EventKit, macOS and iOS) and Google (REST, all platforms)
+/// Calendar integration: Apple (EventKit, macOS) and Google (REST, all platforms)
 mod calendar;
 
 /// OS credential store, shared by plugins and calendar accounts
@@ -88,16 +88,16 @@ pub(crate) mod wiki;
 #[cfg(test)]
 mod stress_test;
 
-// The same Foundation boundary is linked on macOS and iOS.
+// The Foundation file-coordination bridge in `src-swift-cloud`, macOS only.
 #[cfg(target_os = "macos")]
 mod file_coordination;
 pub(crate) mod note_file_access;
 
-/// File coordination must leave WebKit's main thread free. Run both the note
-/// command and its synchronous IPC reply on the blocking pool. Using Tauri's
-/// `command(async)` instead sends replies from Tokio's async workers: WebKit
-/// waits for main to accept each reply, while the iOS dev asset proxy on main
-/// waits for that same saturated runtime, deadlocking startup note reads.
+/// File coordination must leave WebKit's main thread free, so both the note
+/// command and its synchronous IPC reply run on the blocking pool. Tauri's
+/// `command(async)` sends replies from Tokio's async workers instead, which
+/// deadlocked startup note reads in the archived iOS app
+/// (docs/archive/tauri-ios.md).
 ///
 /// Commands that can wait on a whole-Forge scan or index build take the same
 /// route on every platform: run synchronously they hold the main thread, and
@@ -124,7 +124,7 @@ fn dispatch_note_io(
                 | "rename_folder"
                 | "move_folder"
         );
-        let coordinates_note_files = cfg!(any(target_os = "macos", target_os = "ios"))
+        let coordinates_note_files = cfg!(target_os = "macos")
             && matches!(
                 command,
                 "read_note"
@@ -154,7 +154,7 @@ fn dispatch_note_io(
     }
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 use calendar::CalendarPermission;
 use calendar::{CalendarFetchResult, CalendarInfo, CalendarSourceStatus};
 
@@ -213,20 +213,20 @@ use wordpress::{
     wordpress_connect, wordpress_disconnect, wordpress_publish, wordpress_sites, wordpress_status,
 };
 
-// The three EventKit permission commands exist only on macOS and iOS because
+// The three EventKit permission commands exist only on macOS because
 // they wrap an Apple-specific authorization model. Everything else dispatches
 // across sources and compiles everywhere, so Google Calendar works on Windows
 // and Linux too.
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 #[tauri::command]
 fn get_calendar_permission() -> CalendarPermission {
     calendar::apple::get_permission_status()
 }
 
 /// Async so the bridge's wait (up to a minute) for the system prompt stays off
-/// the main thread, which iOS needs free while the alert is up.
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+/// the main thread.
+#[cfg(target_os = "macos")]
 #[tauri::command]
 async fn request_calendar_permission() -> bool {
     tauri::async_runtime::spawn_blocking(calendar::apple::request_permission)
@@ -234,7 +234,7 @@ async fn request_calendar_permission() -> bool {
         .unwrap_or(false)
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 #[tauri::command]
 fn is_calendar_authorized() -> bool {
     calendar::apple::is_authorized()
@@ -344,15 +344,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init());
 
-    #[cfg(target_os = "ios")]
-    let builder = builder
-        .plugin(tauri_plugin_icloud::init())
-        .plugin(tauri_plugin_calendar::init())
-        .plugin(tauri_plugin_document_export::init())
-        .plugin(tauri_plugin_mobile_ui::init());
-
-    // The App Store owns updates and the restart after them, and a phone
-    // has no window geometry to restore.
+    // Updates, the restart after them and window geometry are desktop
+    // concerns; `cfg(desktop)` keeps them out of a mobile target.
     #[cfg(desktop)]
     let builder = builder
         .plugin(navigation_guard())
@@ -451,9 +444,8 @@ pub fn run() {
             // The slot is managed unconditionally, even if this spawn fails, so
             // a later switch still has somewhere to install its watcher.
             let watcher_slot = forge_watcher::WatcherSlot::default();
-            // iOS has no FSEvents, so `notify` polls there and reports the
-            // app's own writes back as external edits. Nothing else can touch
-            // the sandboxed Forge yet; the iCloud work brings its own watcher.
+            // Mobile targets get no watcher: without FSEvents, `notify` polls
+            // and reports the app's own writes back as external edits.
             if cfg!(desktop) {
                 match forge_watcher::spawn(app.handle().clone(), recent_writes.clone()) {
                     Ok(h) => watcher_slot.replace(Some(h)),
@@ -515,10 +507,6 @@ pub fn run() {
             commands::misc::open_support_page,
             #[cfg(mobile)]
             commands::misc::open_external_link,
-            #[cfg(target_os = "ios")]
-            commands::export_import::export_mobile_document,
-            #[cfg(target_os = "ios")]
-            commands::export_import::share_mobile_note,
             #[cfg(desktop)]
             commands::browser_bridge::browser_bridge_status,
             #[cfg(desktop)]
@@ -660,12 +648,12 @@ pub fn run() {
             import_settings_json,
             // Image handling
             save_image,
-            // Calendar: EventKit permission is macOS and iOS only, the rest is cross-platform
-            #[cfg(any(target_os = "macos", target_os = "ios"))]
+            // Calendar: EventKit permission is macOS only, the rest is cross-platform
+            #[cfg(target_os = "macos")]
             get_calendar_permission,
-            #[cfg(any(target_os = "macos", target_os = "ios"))]
+            #[cfg(target_os = "macos")]
             request_calendar_permission,
-            #[cfg(any(target_os = "macos", target_os = "ios"))]
+            #[cfg(target_os = "macos")]
             is_calendar_authorized,
             list_calendar_sources,
             fetch_calendar_events,

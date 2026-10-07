@@ -32,207 +32,6 @@ const MAX_ARCHIVE_ENTRIES: usize = 50_000;
 const MAX_ENTRY_UNCOMPRESSED_SIZE: u64 = 100 * 1024 * 1024; // 100 MB per file
 const MAX_TOTAL_UNCOMPRESSED_SIZE: u64 = 2 * 1024 * 1024 * 1024; // 2 GB total
 
-#[cfg(any(target_os = "ios", test))]
-#[derive(serde::Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub(crate) enum MobileExport {
-    Notes,
-    Backup {
-        password: String,
-    },
-    Settings {
-        json: String,
-    },
-    Note {
-        path: String,
-    },
-    Selection {
-        paths: Vec<String>,
-    },
-    Text {
-        path: String,
-        filename: String,
-        content: String,
-    },
-}
-
-#[cfg(any(target_os = "ios", test))]
-struct PreparedExport {
-    directory: PathBuf,
-    file: PathBuf,
-}
-
-#[cfg(any(target_os = "ios", test))]
-impl Drop for PreparedExport {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.directory);
-    }
-}
-
-/// Build the complete payload in a private, unique staging directory. The
-/// guard stays alive through the native picker and removes it on every exit.
-#[cfg(any(target_os = "ios", test))]
-fn prepare_mobile_export(
-    notes: &Path,
-    cache: &Path,
-    request: MobileExport,
-) -> Result<PreparedExport, String> {
-    let date = chrono::Local::now().format("%Y-%m-%d");
-    let filename = match &request {
-        MobileExport::Notes => format!("moldavite-export-{date}.zip"),
-        MobileExport::Backup { .. } => format!("moldavite-backup-{date}.moldavite-backup"),
-        MobileExport::Settings { .. } => format!("moldavite-settings-{date}.json"),
-        MobileExport::Note { path } => mobile_note_source(notes, path)?
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .into_owned(),
-        MobileExport::Selection { .. } => format!("moldavite-selected-{date}.zip"),
-        MobileExport::Text { filename, .. } => {
-            if !crate::validation::is_safe_filename(filename) || !filename.ends_with(".txt") {
-                return Err("Invalid text export filename".to_string());
-            }
-            filename.clone()
-        }
-    };
-    fs::create_dir_all(cache).map_err(|e| e.to_string())?;
-    let directory = cache.join(format!("moldavite-export-{:032x}", rand::random::<u128>()));
-    #[cfg(unix)]
-    let mut builder = fs::DirBuilder::new();
-    #[cfg(not(unix))]
-    let builder = fs::DirBuilder::new();
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::DirBuilderExt;
-        builder.mode(0o700);
-    }
-    builder.create(&directory).map_err(|e| e.to_string())?;
-    let prepared = PreparedExport {
-        file: directory.join(filename),
-        directory,
-    };
-    match request {
-        MobileExport::Notes => export_notes_to(notes, &prepared.file)?,
-        MobileExport::Backup { password } => {
-            let password = Zeroizing::new(password);
-            export_encrypted_backup_to(notes, &prepared.file, &password)?;
-        }
-        MobileExport::Settings { json } => {
-            export_settings_json(prepared.file.to_string_lossy().into_owned(), json)?;
-        }
-        MobileExport::Note { path } => {
-            let source = mobile_note_source(notes, &path)?;
-            let content = fs::read(source).map_err(|e| e.to_string())?;
-            crate::persist::write_atomic(&prepared.file, &content, Some(0o600))?;
-        }
-        MobileExport::Selection { paths } => {
-            export_selected_mobile_notes(notes, &prepared.file, &paths)?;
-        }
-        MobileExport::Text { path, content, .. } => {
-            mobile_note_source(notes, &path)?;
-            crate::persist::write_atomic(&prepared.file, content.as_bytes(), Some(0o600))?;
-        }
-    }
-    Ok(prepared)
-}
-
-#[cfg(any(target_os = "ios", test))]
-fn mobile_note_source(notes: &Path, path: &str) -> Result<PathBuf, String> {
-    let (category, relative) = path.split_once('/').ok_or("Invalid note path")?;
-    if !matches!(category, "notes" | "daily" | "weekly")
-        || !crate::validation::is_safe_existing_note_path(relative)
-        || !relative.ends_with(".md")
-        || (category != "notes" && relative.contains('/'))
-    {
-        return Err("Invalid note path".to_string());
-    }
-    let base = notes.join(category);
-    let source = base.join(relative);
-    validate_path_within_base(&source, &base).map_err(|_| "Invalid note path")?;
-    let locked = source.with_extension("md.locked");
-    if locked.exists() {
-        return Err("Unlock the selected note before exporting".to_string());
-    }
-    if !source.is_file() {
-        return Err("Note not found".to_string());
-    }
-    Ok(source)
-}
-
-#[cfg(any(target_os = "ios", test))]
-fn export_selected_mobile_notes(
-    notes: &Path,
-    destination: &Path,
-    paths: &[String],
-) -> Result<(), String> {
-    if paths.is_empty() || paths.len() > MAX_ARCHIVE_ENTRIES {
-        return Err("Invalid export selection".to_string());
-    }
-    let sources = paths
-        .iter()
-        .map(|path| mobile_note_source(notes, path))
-        .collect::<Result<Vec<_>, _>>()?;
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    let file = options.open(destination).map_err(|e| e.to_string())?;
-    let mut archive = zip::ZipWriter::new(file);
-    for (relative, source) in paths.iter().zip(sources) {
-        archive
-            .start_file(
-                relative,
-                SimpleFileOptions::default().unix_permissions(0o600),
-            )
-            .map_err(|e| e.to_string())?;
-        let mut input = fs::File::open(source).map_err(|e| e.to_string())?;
-        std::io::copy(&mut input, &mut archive).map_err(|e| e.to_string())?;
-    }
-    archive
-        .finish()
-        .map_err(|e| e.to_string())?
-        .sync_all()
-        .map_err(|e| e.to_string())
-}
-
-#[cfg(target_os = "ios")]
-#[tauri::command]
-pub(crate) async fn export_mobile_document(
-    app: tauri::AppHandle,
-    request: MobileExport,
-) -> Result<bool, String> {
-    use tauri::Manager;
-    use tauri_plugin_document_export::DocumentExportExt;
-    let notes = get_notes_dir()?;
-    let cache = app.path().app_cache_dir().map_err(|e| e.to_string())?;
-    let prepared = tauri::async_runtime::spawn_blocking(move || {
-        prepare_mobile_export(&notes, &cache, request)
-    })
-    .await
-    .map_err(|e| e.to_string())??;
-    app.document_export().export(&prepared.file).await
-}
-
-/// Hand one note's Markdown file to the system share sheet. The staged copy
-/// lives until the sheet reports that its activity finished with the file.
-#[cfg(target_os = "ios")]
-#[tauri::command]
-pub(crate) async fn share_mobile_note(app: tauri::AppHandle, path: String) -> Result<bool, String> {
-    use tauri::Manager;
-    use tauri_plugin_document_export::DocumentExportExt;
-    let notes = get_notes_dir()?;
-    let cache = app.path().app_cache_dir().map_err(|e| e.to_string())?;
-    let prepared = tauri::async_runtime::spawn_blocking(move || {
-        prepare_mobile_export(&notes, &cache, MobileExport::Note { path })
-    })
-    .await
-    .map_err(|e| e.to_string())??;
-    app.document_export().share(&prepared.file).await
-}
-
 /// Basic structure validation for a single ZIP entry name — rejects empty
 /// names, absolute paths, drive letters, NUL bytes, and backslash separators
 /// (which some Windows-created ZIPs use and that our `parts.len() != 2` split
@@ -879,166 +678,6 @@ mod tests {
     }
 
     #[test]
-    fn mobile_exports_contain_complete_payloads_and_remove_staging_files() {
-        let tmp = ExportTempDir::new("mobile-payloads");
-        let source = tmp.0.join("source");
-        let cache = tmp.0.join("cache");
-        scaffold(&source);
-        fs::write(source.join("notes/note.md"), "private note").unwrap();
-
-        let prepared = prepare_mobile_export(&source, &cache, MobileExport::Notes).unwrap();
-        let path = prepared.file.clone();
-        let mut archive = ZipArchive::new(fs::File::open(&path).unwrap()).unwrap();
-        let mut note = String::new();
-        archive
-            .by_name("notes/note.md")
-            .unwrap()
-            .read_to_string(&mut note)
-            .unwrap();
-        assert_eq!(note, "private note");
-        drop(archive);
-        drop(prepared);
-        assert!(!path.exists());
-
-        let json = "{\"app\":\"moldavite\"}";
-        let prepared = prepare_mobile_export(
-            &source,
-            &cache,
-            MobileExport::Settings { json: json.into() },
-        )
-        .unwrap();
-        assert_eq!(fs::read_to_string(&prepared.file).unwrap(), json);
-        drop(prepared);
-
-        let prepared = prepare_mobile_export(
-            &source,
-            &cache,
-            MobileExport::Backup {
-                password: "test password".into(),
-            },
-        )
-        .unwrap();
-        let restored = tmp.0.join("restored");
-        scaffold(&restored);
-        import_encrypted_backup_into(&restored, &prepared.file, "test password", true).unwrap();
-        assert_eq!(
-            fs::read_to_string(restored.join("notes/note.md")).unwrap(),
-            "private note"
-        );
-        drop(prepared);
-        assert_eq!(fs::read_dir(&cache).unwrap().count(), 0);
-    }
-
-    #[test]
-    fn a_failed_mobile_export_removes_its_staging_directory() {
-        let tmp = ExportTempDir::new("mobile-failed");
-        let cache = tmp.0.join("cache");
-        let result = prepare_mobile_export(
-            &tmp.0,
-            &cache,
-            MobileExport::Settings {
-                json: "x".repeat(2 * 1024 * 1024 + 1),
-            },
-        );
-        assert!(result.is_err());
-        assert_eq!(fs::read_dir(cache).unwrap().count(), 0);
-    }
-
-    #[test]
-    fn mobile_note_exports_preserve_metadata_and_distinguish_nested_names() {
-        let tmp = ExportTempDir::new("mobile-selection");
-        let source = tmp.0.join("source");
-        let cache = tmp.0.join("cache");
-        scaffold(&source);
-        fs::create_dir_all(source.join("notes/Project")).unwrap();
-        let raw = "---\ncolor: sage\ncustom: keep\n---\n# Nested note\n";
-        fs::write(source.join("notes/Project/same.md"), raw).unwrap();
-        fs::write(source.join("notes/same.md"), "root note").unwrap();
-        let prepared = prepare_mobile_export(
-            &source,
-            &cache,
-            MobileExport::Note {
-                path: "notes/Project/same.md".into(),
-            },
-        )
-        .unwrap();
-        assert_eq!(prepared.file.file_name().unwrap(), "same.md");
-        assert_eq!(fs::read_to_string(&prepared.file).unwrap(), raw);
-        drop(prepared);
-
-        let prepared = prepare_mobile_export(
-            &source,
-            &cache,
-            MobileExport::Selection {
-                paths: vec!["notes/Project/same.md".into(), "notes/same.md".into()],
-            },
-        )
-        .unwrap();
-        let mut archive = ZipArchive::new(fs::File::open(&prepared.file).unwrap()).unwrap();
-        assert_eq!(archive.len(), 2);
-        let mut content = String::new();
-        archive
-            .by_name("notes/Project/same.md")
-            .unwrap()
-            .read_to_string(&mut content)
-            .unwrap();
-        assert_eq!(content, raw);
-        content.clear();
-        archive
-            .by_name("notes/same.md")
-            .unwrap()
-            .read_to_string(&mut content)
-            .unwrap();
-        assert_eq!(content, "root note");
-        drop(archive);
-        drop(prepared);
-
-        let prepared = prepare_mobile_export(
-            &source,
-            &cache,
-            MobileExport::Text {
-                path: "notes/Project/same.md".into(),
-                filename: "note.txt".into(),
-                content: "Plain text ✓".into(),
-            },
-        )
-        .unwrap();
-        assert_eq!(fs::read_to_string(&prepared.file).unwrap(), "Plain text ✓");
-    }
-
-    #[test]
-    fn mobile_note_exports_reject_internal_paths_traversal_and_locked_notes() {
-        let tmp = ExportTempDir::new("mobile-note-validation");
-        scaffold(&tmp.0);
-        fs::write(tmp.0.join("notes/secret.md"), "stale plaintext").unwrap();
-        fs::write(tmp.0.join("notes/secret.md.locked"), "encrypted").unwrap();
-        for path in [
-            "notes/secret.md",
-            "notes/secret.md.locked",
-            "notes/../secret.md",
-            "daily/sub/note.md",
-            "images/note.md",
-            ".trash/note.md",
-            "/etc/passwd",
-            "notes/missing.md",
-        ] {
-            assert!(mobile_note_source(&tmp.0, path).is_err(), "{path}");
-        }
-        for filename in ["../outside.txt", "/tmp/outside.txt", "note.md"] {
-            assert!(prepare_mobile_export(
-                &tmp.0,
-                &tmp.0.join("cache"),
-                MobileExport::Text {
-                    path: "notes/secret.md".into(),
-                    filename: filename.into(),
-                    content: "text".into()
-                }
-            )
-            .is_err());
-        }
-    }
-
-    #[test]
     fn export_notes_rejects_unsafe_destination_and_creates_private_archive() {
         let tmp = ExportTempDir::new("zip-validation");
         let source = tmp.0.join("source");
@@ -1078,6 +717,32 @@ mod tests {
         let backup = tmp.0.join("vault.moldavite-backup");
         export_encrypted_backup_to(&source, &backup, "password").unwrap();
         assert!(backup.is_file());
+    }
+
+    #[test]
+    fn settings_export_writes_the_json_and_refuses_more_than_two_megabytes() {
+        let tmp = ExportTempDir::new("settings-export");
+        let export = |name: &str, json: String| {
+            let path = tmp.0.join(name);
+            (
+                export_settings_json(path.to_string_lossy().into_owned(), json),
+                path,
+            )
+        };
+
+        let json = r#"{"theme":"cream"}"#;
+        let (result, saved) = export("settings.json", json.into());
+        result.unwrap();
+        assert_eq!(fs::read_to_string(saved).unwrap(), json);
+
+        let limit = 2 * 1024 * 1024;
+        let (result, at_limit) = export("at-limit.json", "x".repeat(limit));
+        result.unwrap();
+        assert_eq!(fs::metadata(at_limit).unwrap().len(), limit as u64);
+
+        let (result, oversized) = export("oversized.json", "x".repeat(limit + 1));
+        assert_eq!(result, Err("Settings JSON too large".to_string()));
+        assert!(!oversized.exists());
     }
 
     #[test]

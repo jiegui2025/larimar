@@ -256,7 +256,7 @@ fn preserve_buffer_copy_unlocked(path: &Path, body: &str, stamp: &str) -> Result
 
 /// Keep each iCloud conflict version of `note` that differs from it as a
 /// `(conflict …)` copy beside it. Returns each copy's file name and body.
-#[cfg(any(target_os = "macos", target_os = "ios", test))]
+#[cfg(any(target_os = "macos", test))]
 pub(crate) fn preserve_conflict_versions(
     note: &Path,
     versions: &[PathBuf],
@@ -1788,7 +1788,7 @@ mod tests {
         }
     }
 
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     #[test]
     fn cloud_placeholder_cannot_be_read_as_empty_or_overwritten() {
         let tmp = TempDir::new("cloud-placeholder");
@@ -2917,7 +2917,7 @@ mod tests {
             "link rewrite took {elapsed:?}"
         );
     }
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     #[test]
     fn a_pending_locked_counterpart_prevents_a_plaintext_save() {
         let tmp = TempDir::new("pending-lock-save");

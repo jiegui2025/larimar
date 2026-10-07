@@ -48,12 +48,6 @@ pub(crate) const DEFAULT_FORGE_NAME: &str = "Default";
 /// Returns the parent directory that holds all Forges. Falls back to the
 /// legacy `notes_directory.parent()` if `forges_root` is unset.
 pub(crate) fn get_forges_root() -> PathBuf {
-    // iOS moves the app's data container on every reinstall and update, so an
-    // absolute path persisted last week names a directory that no longer
-    // exists. There the root is always the current container's Documents.
-    if cfg!(target_os = "ios") {
-        return get_default_notes_dir();
-    }
     let config = read_config();
     if let Some(root) = config.forges_root.as_deref() {
         let p = PathBuf::from(root);
@@ -100,9 +94,6 @@ pub(crate) fn get_notes_dir() -> Result<PathBuf, String> {
 }
 
 fn get_local_notes_dir() -> PathBuf {
-    if cfg!(target_os = "ios") {
-        return get_forges_root().join(get_active_forge_name());
-    }
     let config = read_config();
     // Preferred: forges_root + active_forge.
     if let (Some(root), Some(name)) = (

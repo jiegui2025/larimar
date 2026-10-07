@@ -9,22 +9,15 @@
 //! is why PKCE carries the actual security here. It is still read from the
 //! environment at build time rather than committed, so it stays out of a public
 //! repository.
-//!
-//! A phone app cannot listen on a loopback port, so iOS uses Google's "iOS"
-//! client type: consent runs in `ASWebAuthenticationSession` and redirects to a
-//! custom scheme. That client type has no secret, so its token requests carry none.
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
 use rand::RngCore;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-#[cfg(not(target_os = "ios"))]
 use std::io::{BufRead, BufReader, Write};
-#[cfg(not(target_os = "ios"))]
 use std::net::TcpListener;
 use std::time::{Duration, Instant};
-#[cfg(not(target_os = "ios"))]
 use tauri_plugin_shell::ShellExt;
 
 use crate::secrets::{KeychainSecretStore, SecretStore};
@@ -36,7 +29,6 @@ const REFRESH_TOKEN_ACCOUNT: &str = "calendar:google:refresh_token";
 
 /// How long to wait for the user to finish consent before giving up, so an
 /// abandoned browser tab cannot block a thread for the life of the process.
-#[cfg(not(target_os = "ios"))]
 const CALLBACK_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// Refresh slightly before real expiry; a token that dies mid-request costs a
@@ -45,46 +37,20 @@ const EXPIRY_MARGIN: Duration = Duration::from_secs(60);
 
 /// How often the non-blocking accept loop re-checks for a connection. Short
 /// enough that consent feels instant, long enough not to spin a core.
-#[cfg(not(target_os = "ios"))]
 const ACCEPT_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
-#[cfg(not(target_os = "ios"))]
 pub const CLIENT_ID: Option<&str> = option_env!("MOLDAVITE_GOOGLE_CLIENT_ID");
-#[cfg(not(target_os = "ios"))]
 pub const CLIENT_SECRET: Option<&str> = option_env!("MOLDAVITE_GOOGLE_CLIENT_SECRET");
-
-/// A public id with no secret behind it (Google's iOS SDK keeps it in Info.plist),
-/// committed because iOS builds on a developer's Mac, where a forgotten variable
-/// would quietly ship without Google. `MOLDAVITE_GOOGLE_IOS_CLIENT_ID` overrides it.
-#[cfg(any(target_os = "ios", test))]
-const IOS_DEFAULT_CLIENT_ID: &str =
-    "724022062223-4vom8okssbq2bq6nd21rt4u37lk0vtrr.apps.googleusercontent.com";
-
-#[cfg(target_os = "ios")]
-const IOS_CLIENT_ID: &str = match option_env!("MOLDAVITE_GOOGLE_IOS_CLIENT_ID") {
-    Some(id) if !id.is_empty() => id,
-    _ => IOS_DEFAULT_CLIENT_ID,
-};
 
 struct OAuthClient {
     id: &'static str,
     secret: Option<&'static str>,
 }
 
-#[cfg(not(target_os = "ios"))]
 fn client() -> Option<OAuthClient> {
     Some(OAuthClient {
         id: CLIENT_ID.filter(|v| !v.is_empty())?,
         secret: Some(CLIENT_SECRET.filter(|v| !v.is_empty())?),
-    })
-}
-
-#[cfg(target_os = "ios")]
-fn client() -> Option<OAuthClient> {
-    ios_redirect(IOS_CLIENT_ID)?;
-    Some(OAuthClient {
-        id: IOS_CLIENT_ID,
-        secret: None,
     })
 }
 
@@ -202,7 +168,6 @@ pub struct Callback {
 
 /// Parse the query out of an HTTP request line such as
 /// `GET /?code=abc&state=xyz HTTP/1.1`.
-#[cfg(not(target_os = "ios"))]
 pub fn parse_callback(request_line: &str) -> Callback {
     let Some(target) = request_line.split_whitespace().nth(1) else {
         return Callback::default();
@@ -210,36 +175,6 @@ pub fn parse_callback(request_line: &str) -> Callback {
     let Some((_, query)) = target.split_once('?') else {
         return Callback::default();
     };
-    parse_query(query)
-}
-
-/// Google's iOS redirect for `<n>.apps.googleusercontent.com` is
-/// `com.googleusercontent.apps.<n>:/oauth2redirect`. Returns (scheme, redirect
-/// URI), or `None` for an id not shaped like one Google issues.
-#[cfg(any(target_os = "ios", test))]
-fn ios_redirect(client_id: &str) -> Option<(String, String)> {
-    let prefix = client_id.strip_suffix(".apps.googleusercontent.com")?;
-    if prefix.is_empty()
-        || !prefix
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
-    {
-        return None;
-    }
-    let scheme = format!("com.googleusercontent.apps.{prefix}");
-    let redirect_uri = format!("{scheme}:/oauth2redirect");
-    Some((scheme, redirect_uri))
-}
-
-/// Anything not on our exact redirect URI parses as empty, which the state
-/// check then refuses.
-#[cfg(any(target_os = "ios", test))]
-fn parse_redirect_url(url: &str, redirect_uri: &str) -> Callback {
-    let url = url.split('#').next().unwrap_or_default();
-    let (target, query) = url.split_once('?').unwrap_or((url, ""));
-    if target != redirect_uri {
-        return Callback::default();
-    }
     parse_query(query)
 }
 
@@ -296,13 +231,11 @@ fn percent_decode(value: &str) -> String {
 /// redirect is a few hundred bytes; anything on this machine can also connect,
 /// and an unbounded `read_line` would grow a `String` for as long as such a
 /// caller keeps sending bytes without a newline.
-#[cfg(not(target_os = "ios"))]
 const MAX_REQUEST_LINE_BYTES: u64 = 8 * 1024;
 
 /// Read the HTTP request line, never retaining more than the cap. `None` means
 /// the connection produced nothing usable, which the caller treats as "not our
 /// redirect" and moves on to the next connection.
-#[cfg(not(target_os = "ios"))]
 fn read_request_line(stream: impl std::io::Read) -> Option<String> {
     let mut line = String::new();
     BufReader::new(stream.take(MAX_REQUEST_LINE_BYTES))
@@ -311,7 +244,6 @@ fn read_request_line(stream: impl std::io::Read) -> Option<String> {
     Some(line)
 }
 
-#[cfg(not(target_os = "ios"))]
 const CALLBACK_PAGE: &str = "<!doctype html><meta charset=\"utf-8\"><title>Moldavite</title>\
 <body style=\"font-family:system-ui;padding:3rem;text-align:center\">\
 <h1>Moldavite is connected</h1><p>You can close this tab and return to the app.</p>";
@@ -328,7 +260,6 @@ const CALLBACK_PAGE: &str = "<!doctype html><meta charset=\"utf-8\"><title>Molda
 /// The accept loop is non-blocking because a blocking `accept()` would park
 /// here forever when the user abandons the consent tab — the deadline below is
 /// only enforceable if we get to re-check it.
-#[cfg(not(target_os = "ios"))]
 fn await_callback(listener: TcpListener, expected_state: &str) -> Result<Callback, String> {
     listener
         .set_nonblocking(true)
@@ -501,27 +432,6 @@ pub async fn connect(app: &tauri::AppHandle) -> Result<AccessToken, String> {
 }
 
 /// Returns the consent redirect and the redirect URI the token exchange must repeat.
-#[cfg(target_os = "ios")]
-async fn authorize(
-    app: &tauri::AppHandle,
-    client_id: &str,
-    challenge: &str,
-    state: &str,
-) -> Result<(Callback, String), String> {
-    use tauri_plugin_calendar::CalendarExt;
-
-    let (scheme, redirect_uri) = ios_redirect(client_id).ok_or_else(not_configured_message)?;
-    let url = authorize_url(client_id, &redirect_uri, challenge, state);
-    let returned = app
-        .calendar()
-        .authenticate(&url, &scheme)
-        .await?
-        .ok_or_else(|| "Connection cancelled.".to_string())?;
-    Ok((parse_redirect_url(&returned, &redirect_uri), redirect_uri))
-}
-
-/// Returns the consent redirect and the redirect URI the token exchange must repeat.
-#[cfg(not(target_os = "ios"))]
 async fn authorize(
     app: &tauri::AppHandle,
     client_id: &str,
@@ -707,70 +617,6 @@ mod tests {
         assert!(url.contains("state=st"));
     }
 
-    const IOS_SCHEME: &str =
-        "com.googleusercontent.apps.724022062223-4vom8okssbq2bq6nd21rt4u37lk0vtrr";
-    const IOS_REDIRECT: &str =
-        "com.googleusercontent.apps.724022062223-4vom8okssbq2bq6nd21rt4u37lk0vtrr:/oauth2redirect";
-
-    #[test]
-    fn the_ios_redirect_is_the_client_id_reversed() {
-        let (scheme, redirect_uri) = ios_redirect(IOS_DEFAULT_CLIENT_ID).unwrap();
-        assert_eq!(scheme, IOS_SCHEME);
-        assert_eq!(redirect_uri, IOS_REDIRECT);
-
-        let url = authorize_url(IOS_DEFAULT_CLIENT_ID, &redirect_uri, "chal", "st");
-        assert!(url.contains(
-            "redirect_uri=com.googleusercontent.apps.724022062223-4vom8okssbq2bq6nd21rt4u37lk0vtrr%3A%2Foauth2redirect"
-        ));
-        assert!(url.contains("code_challenge_method=S256"));
-    }
-
-    #[test]
-    fn a_malformed_ios_client_id_has_no_redirect() {
-        assert!(ios_redirect("").is_none());
-        assert!(ios_redirect("123-abc").is_none());
-        assert!(ios_redirect(".apps.googleusercontent.com").is_none());
-        assert!(ios_redirect("a/b:c.apps.googleusercontent.com").is_none());
-        assert!(ios_redirect("123-abc.apps.googleusercontent.com.evil").is_none());
-    }
-
-    #[test]
-    fn parses_the_redirect_the_sign_in_sheet_returns() {
-        let cb = parse_redirect_url(
-            &format!("{IOS_REDIRECT}?state=st&code=4%2F0Ab&scope=https%3A%2F%2Fx"),
-            IOS_REDIRECT,
-        );
-        assert_eq!(cb.code.as_deref(), Some("4/0Ab"));
-        assert_eq!(cb.state.as_deref(), Some("st"));
-        assert!(cb.error.is_none());
-
-        let denied = parse_redirect_url(
-            &format!("{IOS_REDIRECT}?error=access_denied&state=st"),
-            IOS_REDIRECT,
-        );
-        assert_eq!(denied.error.as_deref(), Some("access_denied"));
-
-        let with_fragment =
-            parse_redirect_url(&format!("{IOS_REDIRECT}?code=c&state=st#"), IOS_REDIRECT);
-        assert_eq!(with_fragment.state.as_deref(), Some("st"));
-    }
-
-    #[test]
-    fn a_redirect_to_any_other_address_parses_as_empty() {
-        for url in [
-            format!("{IOS_SCHEME}:/elsewhere?code=c&state=st"),
-            "com.googleusercontent.apps.other:/oauth2redirect?code=c&state=st".to_string(),
-            "https://example.com/?code=c&state=st".to_string(),
-            IOS_REDIRECT.to_string(),
-        ] {
-            assert_eq!(
-                parse_redirect_url(&url, IOS_REDIRECT),
-                Callback::default(),
-                "{url}"
-            );
-        }
-    }
-
     #[test]
     fn a_redirect_without_our_state_is_refused_even_with_a_code() {
         let foreign = Callback {
@@ -830,45 +676,6 @@ mod tests {
             ..Callback::default()
         };
         assert!(authorization_code(empty, "ours").is_err());
-    }
-
-    fn keys(params: &[(&str, &str)]) -> Vec<String> {
-        params.iter().map(|(key, _)| key.to_string()).collect()
-    }
-
-    #[test]
-    fn the_ios_client_sends_no_secret_in_either_token_request() {
-        let ios = OAuthClient {
-            id: IOS_DEFAULT_CLIENT_ID,
-            secret: None,
-        };
-
-        let exchange = token_request(
-            &ios,
-            &[
-                ("code", "c"),
-                ("code_verifier", "v"),
-                ("grant_type", "authorization_code"),
-                ("redirect_uri", IOS_REDIRECT),
-            ],
-        );
-        assert_eq!(
-            keys(&exchange),
-            [
-                "client_id",
-                "code",
-                "code_verifier",
-                "grant_type",
-                "redirect_uri"
-            ]
-        );
-        assert_eq!(exchange[0].1, IOS_DEFAULT_CLIENT_ID);
-
-        let refresh = token_request(
-            &ios,
-            &[("refresh_token", "r"), ("grant_type", "refresh_token")],
-        );
-        assert_eq!(keys(&refresh), ["client_id", "refresh_token", "grant_type"]);
     }
 
     #[test]

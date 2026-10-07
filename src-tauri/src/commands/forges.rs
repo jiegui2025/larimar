@@ -133,7 +133,7 @@ pub(crate) fn list_forges() -> Result<Vec<ForgeInfo>, String> {
         }
     }
     out.sort_by_key(|f| f.name.to_lowercase());
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     out.push(ForgeInfo {
         id: crate::cloud_forge::FORGE_ID.to_string(),
         name: "Synced Forge".to_string(),
@@ -641,9 +641,6 @@ pub(crate) fn set_forges_root(
     recent: State<'_, Arc<RecentWrites>>,
     index: State<'_, Arc<BacklinksIndex>>,
 ) -> Result<String, String> {
-    if cfg!(target_os = "ios") {
-        return Err("The Forges folder is fixed to the app's container on iOS".to_string());
-    }
     let new_root = PathBuf::from(&path);
     if !new_root.is_absolute() {
         return Err("Path must be absolute".to_string());

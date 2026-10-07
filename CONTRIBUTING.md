@@ -16,9 +16,6 @@ Prerequisites:
 - Rust 1.88 or newer (the `rust-version` in `src-tauri/Cargo.toml`)
 - Xcode Command Line Tools on macOS; on Linux, the apt packages listed in the
   `build-linux` job of `.github/workflows/ci.yml`
-- For the iPhone and iPad build: full Xcode, the iOS Rust targets, CocoaPods and
-  the rustup `llvm-tools` component, as listed in
-  [docs/MOBILE.md](docs/MOBILE.md#building-and-running)
 
 ### Arch Linux and CachyOS
 

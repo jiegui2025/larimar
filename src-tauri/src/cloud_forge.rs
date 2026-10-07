@@ -8,21 +8,16 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use tauri::AppHandle;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 use tauri::{Emitter, Manager};
 
-#[cfg(not(target_os = "ios"))]
 mod models;
-#[cfg(any(target_os = "macos", target_os = "ios", test))]
+#[cfg(any(target_os = "macos", test))]
 use models::{ChangeKind, CloudChange};
 use models::{CloudItem, DownloadState};
-#[cfg(target_os = "ios")]
-use tauri_plugin_icloud::models;
 
 #[cfg(target_os = "macos")]
 use crate::file_coordination as native;
-#[cfg(target_os = "ios")]
-use tauri_plugin_icloud::coordination as native;
 
 pub(crate) const FORGE_ID: &str = "icloud://moldavite";
 /// The frontend recognises this exact text (`NOT_DOWNLOADED_MESSAGE` in
@@ -34,7 +29,7 @@ static ITEMS: Mutex<BTreeMap<String, CloudItem>> = Mutex::new(BTreeMap::new());
 
 /// Whether the last connection attempt produced a readable root. A failed
 /// attempt leaves the native query running, so its first pass can still arrive.
-#[cfg_attr(not(any(target_os = "macos", target_os = "ios")), allow(dead_code))]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 enum Readiness {
     Connecting,
     Ready,
@@ -47,11 +42,11 @@ pub(crate) fn initialize(app: AppHandle) {
 }
 
 pub(crate) fn root() -> Result<PathBuf, String> {
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     {
         native::cloud_root()
     }
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(target_os = "macos"))]
     Err("The iCloud Forge is available on Apple devices only".to_string())
 }
 
@@ -93,7 +88,7 @@ pub(crate) fn readiness() -> (&'static str, Option<String>) {
 
 /// Mark the root ready. Returns true when this ends a failed connection, so
 /// the caller announces a root nothing else is going to announce.
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 fn become_ready() -> bool {
     let mut readiness = READINESS
         .lock()
@@ -104,7 +99,7 @@ fn become_ready() -> bool {
 }
 
 /// Refresh the Forge the startup connection could not, and tell the frontend.
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 fn announce_late_ready(app: &AppHandle) {
     if !is_active() {
         return;
@@ -125,7 +120,7 @@ fn announce_late_ready(app: &AppHandle) {
 
 /// Metadata sends every item on every update, including upload progress. Only
 /// these reach the frontend, which reloads the note list and reads notes on them.
-#[cfg(any(target_os = "macos", target_os = "ios", test))]
+#[cfg(any(target_os = "macos", test))]
 #[derive(Debug, Default, PartialEq)]
 struct ChangeEffects {
     /// A name was added or removed, or a note's contents arrived or left.
@@ -138,7 +133,7 @@ struct ChangeEffects {
     conflicts: Vec<String>,
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios", test))]
+#[cfg(any(target_os = "macos", test))]
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ItemUpdate {
@@ -154,7 +149,7 @@ fn state_is_local(state: DownloadState) -> bool {
     )
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios", test))]
+#[cfg(any(target_os = "macos", test))]
 fn is_note_item(path: &str) -> bool {
     let Some((category, relative)) = path.split_once('/') else {
         return false;
@@ -164,7 +159,7 @@ fn is_note_item(path: &str) -> bool {
         && crate::validation::is_safe_existing_note_path(relative)
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios", test))]
+#[cfg(any(target_os = "macos", test))]
 fn apply_change(items: &mut BTreeMap<String, CloudItem>, change: &CloudChange) -> ChangeEffects {
     let mut effects = ChangeEffects::default();
     let conflicted =
@@ -201,7 +196,7 @@ fn apply_change(items: &mut BTreeMap<String, CloudItem>, change: &CloudChange) -
                 };
                 // The content date can move before the new bytes land, so the end
                 // of a download (a state change, or is_downloading clearing) also
-                // asks for a read. iOS has no file watcher to do it instead.
+                // asks for a read.
                 let contents_may_differ = (item.modified.is_some()
                     && previous.modified != item.modified)
                     || previous.download_state != item.download_state
@@ -234,7 +229,7 @@ fn apply_change(items: &mut BTreeMap<String, CloudItem>, change: &CloudChange) -
     effects
 }
 
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 fn changed(change: CloudChange) {
     let effects = match ITEMS.lock() {
         Ok(mut items) => apply_change(&mut items, &change),
@@ -295,7 +290,7 @@ fn changed(change: CloudChange) {
 /// `(conflict …)` copy beside it, then let iCloud discard those versions.
 /// A locked note is left alone: its ciphertext authenticates its own path,
 /// so a copy under another name could never be decrypted.
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 fn resolve_conflicts(app: &AppHandle, rel: String) {
     static RESOLVING: Mutex<std::collections::BTreeSet<String>> =
         Mutex::new(std::collections::BTreeSet::new());
@@ -366,7 +361,7 @@ pub(crate) async fn connect(app: &AppHandle) -> Result<PathBuf, String> {
         Err(_) if root().is_ok() => root(),
         other => other,
     };
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     match &result {
         Ok(_) => {
             become_ready();
@@ -384,35 +379,6 @@ pub(crate) async fn connect(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 async fn connect_native(app: &AppHandle) -> Result<PathBuf, String> {
-    #[cfg(target_os = "ios")]
-    {
-        use tauri_plugin_icloud::ICloudExt;
-        app.icloud().resolve().await?;
-        let (send, receive) = std::sync::mpsc::sync_channel(1);
-        let channel = tauri::ipc::Channel::new(move |body| {
-            let change: CloudChange = body.deserialize()?;
-            let initial = matches!(
-                change.kind,
-                ChangeKind::Initial | ChangeKind::AccountChanged
-            );
-            changed(change);
-            if initial {
-                let _ = send.try_send(());
-            }
-            Ok(())
-        });
-        app.icloud().observe(channel).await?;
-        tauri::async_runtime::spawn_blocking(move || {
-            receive
-                .recv_timeout(std::time::Duration::from_secs(15))
-                .map_err(|_| {
-                    "iCloud is still preparing this Forge. Try again shortly.".to_string()
-                })?;
-            root()
-        })
-        .await
-        .map_err(|error| error.to_string())?
-    }
     #[cfg(target_os = "macos")]
     {
         let _ = app;
@@ -422,7 +388,7 @@ async fn connect_native(app: &AppHandle) -> Result<PathBuf, String> {
         .await
         .map_err(|error| error.to_string())?
     }
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(target_os = "macos"))]
     {
         let _ = app;
         Err("The iCloud Forge is available on Apple devices only".to_string())
@@ -439,17 +405,15 @@ pub(crate) fn snapshot() -> Result<Vec<CloudItem>, String> {
 
 /// SF_DATALESS from `<sys/stat.h>`: the file's contents are not on this device,
 /// and reading it makes the system download them first.
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(target_os = "macos")]
 const SF_DATALESS: u32 = 0x4000_0000;
 
 fn is_dataless(metadata: &std::fs::Metadata) -> bool {
-    #[cfg(target_os = "ios")]
-    use std::os::ios::fs::MetadataExt;
     #[cfg(target_os = "macos")]
     use std::os::macos::fs::MetadataExt;
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     return metadata.st_flags() & SF_DATALESS != 0;
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(target_os = "macos"))]
     {
         let _ = metadata;
         false
@@ -592,7 +556,7 @@ pub(crate) fn download(path: &Path) -> Result<CloudDownload, String> {
             error: None,
         });
     }
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(target_os = "macos")]
     {
         let relative = root()
             .ok()
@@ -605,7 +569,7 @@ pub(crate) fn download(path: &Path) -> Result<CloudDownload, String> {
             error: item.error,
         })
     }
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(target_os = "macos"))]
     Err("The iCloud Forge is available on Apple devices only".to_string())
 }
 
