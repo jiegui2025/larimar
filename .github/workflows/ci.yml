@@ -134,6 +134,22 @@ jobs:
           HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: node scripts/check-large-files.mjs "$BASE" "$HEAD"
 
+  # Upstream's runtime identifiers (bundle id, iCloud container, clipper host,
+  # deep-link scheme, Apple team, on-disk format strings) must not come back:
+  # each one shares state or data with an installed upstream app (#4). The
+  # runner's own Node is enough; the script only runs git grep.
+  identity:
+    name: check-identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Check for upstream runtime identifiers
+        run: node scripts/check-identity.mjs
+
   rust:
     name: ${{ matrix.task }}
     runs-on: ubuntu-latest
@@ -533,7 +549,7 @@ jobs:
   ci-ok:
     name: ci-ok
     if: always()
-    needs: [test-icloud, web, extension, large-files, rust, rust-windows, audit-rust, rust-macos, build-linux, smoke-linux-fedora]
+    needs: [test-icloud, web, extension, large-files, identity, rust, rust-windows, audit-rust, rust-macos, build-linux, smoke-linux-fedora]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
