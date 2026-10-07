@@ -22,7 +22,7 @@ fn main() {
         // Link Swift runtime and compile Swift sources
         SwiftLinker::new("10.15")
             .with_package("EventKitBridge", "./src-swift/")
-            .with_package("MoldaviteCloud", "./plugins/tauri-plugin-icloud/ios/Core/")
+            .with_package("MoldaviteCloud", "./src-swift-cloud/")
             .link();
     }
 

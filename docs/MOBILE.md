@@ -437,7 +437,7 @@ The Foundation-only core has filesystem regression tests runnable without an
 iCloud account:
 
 ```sh
-swift test --package-path src-tauri/plugins/tauri-plugin-icloud/ios/Core
+swift test --package-path src-tauri/src-swift-cloud
 ```
 
 They cover placeholder vs empty-file handling, unknown download state (readable

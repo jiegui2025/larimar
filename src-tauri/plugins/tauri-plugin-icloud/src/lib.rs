@@ -2,6 +2,7 @@
 //! The app owns Forge selection, content I/O, and conflict-copy policy.
 #![cfg(target_os = "ios")]
 
+#[path = "../../../src/file_coordination.rs"]
 pub mod coordination;
 
 use tauri::{
@@ -12,6 +13,7 @@ use tauri::{
 
 tauri::ios_plugin_binding!(init_plugin_icloud);
 
+#[path = "../../../src/cloud_forge/models.rs"]
 pub mod models;
 pub use models::*;
 
