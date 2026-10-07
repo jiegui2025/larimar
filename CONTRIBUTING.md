@@ -8,15 +8,30 @@ reviewed as changes to user data or a trust boundary.
 
 Prerequisites:
 
-- Node.js 20 (the version in `.nvmrc`; `package.json` accepts `^20 || ^22`, and
-  CI runs 20). On newer Node, vitest fails to give jsdom's globals to the test
-  context and a couple of hundred tests fail for reasons unrelated to the code.
-- Rust 1.88 or newer
+- Node.js 20 (the version in `.nvmrc` and `mise.toml`; `package.json` accepts
+  `^20 || ^22`, and CI runs 20). On newer Node, vitest fails to give jsdom's
+  globals to the test context and a couple of hundred tests fail for reasons
+  unrelated to the code. With [mise](https://mise.jdx.dev), `mise install` in
+  the checkout provides it (`node --version` prints `v20.x`).
+- Rust 1.88 or newer (the `rust-version` in `src-tauri/Cargo.toml`)
 - Xcode Command Line Tools on macOS; on Linux, the apt packages listed in the
   `build-linux` job of `.github/workflows/ci.yml`
 - For the iPhone and iPad build: full Xcode, the iOS Rust targets, CocoaPods and
   the rustup `llvm-tools` component, as listed in
   [docs/MOBILE.md](docs/MOBILE.md#building-and-running)
+
+### Arch Linux and CachyOS
+
+The `build-linux` apt list maps to these packages:
+
+```bash
+sudo pacman -S --needed base-devel curl wget file openssl gtk3 webkit2gtk-4.1 \
+  libayatana-appindicator librsvg patchelf
+```
+
+Rust comes from rustup or Arch's `rust` package.
+
+### Build and run
 
 Clone the repository, install dependencies, and start Tauri with frontend hot
 reload:

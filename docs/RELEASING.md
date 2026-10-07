@@ -36,8 +36,9 @@ uploaded to App Store Connect instead; see [IOS_APP_STORE.md](IOS_APP_STORE.md).
    Use the Node version in `.nvmrc` (20; 22 also works). On newer Node, vitest
    fails to give jsdom's globals to the test context and a couple of hundred
    tests fail for reasons that have nothing to do with the code. CI does not
-   read `.nvmrc`: `ci.yml` and `release.yml` each hardcode `node-version: 20`,
-   so bumping `.nvmrc` means editing both workflows in the same change.
+   read `.nvmrc`, and mise reads `mise.toml` first: `ci.yml`, `release.yml`
+   and `mise.toml` each hardcode 20, so bumping `.nvmrc` means editing all
+   three in the same change.
 
 3. Add a `## [X.Y.Z] - YYYY-MM-DD` section to `CHANGELOG.md` (Keep-a-Changelog
    format: `### Added` / `### Changed` / `### Fixed` / `### Removed`). This is
