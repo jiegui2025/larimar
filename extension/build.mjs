@@ -10,8 +10,8 @@
  * - `dist/chrome-store` drops `key`. The Web Store assigns its own id and
  *   re-signs the package, and Chrome refuses to install one whose `key` implies
  *   a different id. Uploading the unpacked manifest is therefore a rejected
- *   item, not a working one. See docs/CHROME_STORE.md for the id step that
- *   follows a first upload.
+ *   item, not a working one. The id the store assigns must then be listed in
+ *   `CHROME_EXTENSION_IDS` in src-tauri/src/commands/browser_bridge.rs.
  * - `dist/firefox` drops `key` and keeps the Gecko id.
  */
 

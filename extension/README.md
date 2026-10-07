@@ -77,8 +77,7 @@ The store assigns an id that will not match the unpacked one, and the app only
 opens the bridge to ids it knows, so both ids are listed in
 `CHROME_EXTENSION_IDS` in `src-tauri/src/commands/browser_bridge.rs`. A
 recreated store item would get a new id, which has to be added there and
-shipped in an app release. Full checklist, listing copy and permission justifications:
-`docs/CHROME_STORE.md`.
+shipped in an app release.
 
 ## Development
 

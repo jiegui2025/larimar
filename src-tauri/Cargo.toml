@@ -64,7 +64,7 @@ tauri-plugin-window-state = "2"
 # Google Calendar REST + OAuth token exchange, WordPress.com, and plugin
 # `net.fetch`. Not the process's only outbound HTTP: `fastembed` downloads
 # models from Hugging Face over its own clients and `tauri-plugin-updater`
-# brings its own; see docs/privacy.html for the documented destinations.
+# brings its own.
 # `rustls-tls` is requested here, but fastembed's `hf-hub-native-tls` and
 # `ort-download-binaries-native-tls` also turn on reqwest's `default-tls` for
 # the whole graph, so a bare `Client::builder()` still picks the system TLS

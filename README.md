@@ -127,9 +127,6 @@ Forges stay separate.
 Notes that are only in iCloud show a small cloud and download when you open
 them and tap **Download**.
 
-See [the Mac iCloud guide](docs/MAC_ICLOUD.md) for setup, adding existing notes,
-and troubleshooting.
-
 ## What else it does
 
 Settings → Appearance offers seven themes, Cream, Sage, Slate, Clay, Plum,
@@ -192,9 +189,9 @@ locally.
 ## Contributing
 
 Issues and pull requests welcome. `CONTRIBUTING.md` covers setup and the
-conventions, `docs/ARCHITECTURE.md` how the pieces fit together,
-`docs/RELEASING.md` the release process, and `docs/DESIGN_CREAM.md` the design
-system. Run `npm test`, `npm run lint`, and `cargo test` before opening a PR.
+conventions, `docs/ARCHITECTURE.md` how the pieces fit together, and
+`docs/RELEASING.md` the release process. Run `npm test`, `npm run lint`, and
+`cargo test` before opening a PR.
 
 Use the Node version in `.nvmrc`; `nvm use` picks it up. Node only builds and
 tests the app (the shipped binary is Rust and contains no Node runtime), but on

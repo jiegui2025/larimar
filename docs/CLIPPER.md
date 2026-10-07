@@ -31,7 +31,8 @@ Install **Moldavite Clipper** from the
 Edge asks you to allow extensions from other stores the first time.
 
 Contributors can still load `dist/chrome` unpacked; the app accepts both the
-store id and the unpacked one (see `docs/CHROME_STORE.md`).
+store id and the unpacked one (`CHROME_EXTENSION_IDS` in
+`src-tauri/src/commands/browser_bridge.rs`).
 
 **Firefox**
 
