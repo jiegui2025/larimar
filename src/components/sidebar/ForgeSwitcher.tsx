@@ -38,8 +38,8 @@ export function ForgeSwitcher({ onManage }: ForgeSwitcherProps) {
       clearImpactOrigin();
       void loadForges().finally(() => setOpen(true));
     };
-    window.addEventListener('moldavite:open-forge-switcher', onOpen);
-    return () => window.removeEventListener('moldavite:open-forge-switcher', onOpen);
+    window.addEventListener('larimar:open-forge-switcher', onOpen);
+    return () => window.removeEventListener('larimar:open-forge-switcher', onOpen);
   }, [loadForges]);
 
   useEffect(() => {

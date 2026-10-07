@@ -230,9 +230,9 @@ describe('dropping a Markdown file on the window', () => {
     expect(post).toHaveBeenCalledTimes(1);
     const [message, objects] = post.mock.calls[0];
     expect(objects).toEqual([file]);
-    expect(message).toEqual({ moldaviteDrop: expect.stringMatching(/^[0-9a-f]{32}$/) });
+    expect(message).toEqual({ larimarDrop: expect.stringMatching(/^[0-9a-f]{32}$/) });
     expect(calls('admit_dropped_files')[0][1]).toMatchObject({
-      token: message.moldaviteDrop,
+      token: message.larimarDrop,
       uriList: null,
     });
     expect(activeNote().id).toBe(`loose:${LOOSE_ID}`);
