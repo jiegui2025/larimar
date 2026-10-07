@@ -1,21 +1,25 @@
 /**
  * Validation and fixed-origin URL construction for the public plugin registry.
  * Registry JSON is untrusted display metadata: file downloads are derived only
- * from a validated id and the pinned repository base below.
+ * from a validated id and the pinned repository below.
  */
 
 import { isNewerVersion } from '@/lib/changelog';
 import { isValidAllowedHost } from './manifest';
 import { SUPPORTED_PLUGIN_API_VERSIONS, type PluginInfo } from './types';
 
-export const COMMUNITY_REGISTRY_URL =
-  'https://raw.githubusercontent.com/mauropereiira/moldavite-plugins/main/registry.json';
-export const COMMUNITY_PLUGIN_RAW_BASE =
-  'https://raw.githubusercontent.com/mauropereiira/moldavite-plugins/main/plugins';
-const COMMUNITY_PLUGIN_SOURCE_BASE =
-  'https://github.com/mauropereiira/moldavite-plugins/tree/main/plugins';
-export const COMMUNITY_REPORT_URL =
-  'https://github.com/mauropereiira/moldavite-plugins/issues/new?template=report-plugin.yml';
+/**
+ * The pinned GitHub repository (`owner/name`) whose `main` branch holds
+ * `registry.json` and `plugins/<id>/`. Larimar has no plugin registry yet, so
+ * this is null: the directory lists nothing and browsing it sends no request.
+ * Setting it also needs `https://raw.githubusercontent.com` back in the
+ * webview CSP's `connect-src` (tauri.conf.json), which the page fetches from.
+ */
+export const COMMUNITY_REGISTRY_REPO: string | null = null;
+
+export function communityRegistryUrl(repo: string): string {
+  return `https://raw.githubusercontent.com/${repo}/main/registry.json`;
+}
 
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 const SHA256_RE = /^[a-f0-9]{64}$/;
@@ -157,14 +161,20 @@ export function parseCommunityRegistry(value: unknown): ParsedCommunityRegistry 
 
 /** Never accepts a registry path or URL: only a validated registry id reaches this helper. */
 export function communityPluginFileUrl(
+  repo: string,
   plugin: CommunityPlugin,
   file: 'manifest.json' | 'plugin.js'
 ): string {
-  return `${COMMUNITY_PLUGIN_RAW_BASE}/${plugin.id}/${file}`;
+  return `https://raw.githubusercontent.com/${repo}/main/plugins/${plugin.id}/${file}`;
 }
 
-export function communityPluginSourceUrl(plugin: CommunityPlugin): string {
-  return `${COMMUNITY_PLUGIN_SOURCE_BASE}/${plugin.id}`;
+export function communityPluginSourceUrl(repo: string, plugin: CommunityPlugin): string {
+  return `https://github.com/${repo}/tree/main/plugins/${plugin.id}`;
+}
+
+export function communityReportUrl(repo: string, plugin: CommunityPlugin): string {
+  const title = encodeURIComponent(`Report: ${plugin.id}`);
+  return `https://github.com/${repo}/issues/new?template=report-plugin.yml&title=${title}`;
 }
 
 /** Why this app can't run a listed plugin, or `null` when it can. */

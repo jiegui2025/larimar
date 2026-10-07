@@ -287,11 +287,11 @@ function validateFetchUrl(value: unknown, allowedHosts: readonly string[]): URL 
 /**
  * Validates the call, then hands the actual request to the `plugin_fetch`
  * Tauri command — the webview CSP's fixed `connect-src` would otherwise block
- * a plugin's request to any host beyond `self` and the registry's GitHub
- * hosts before this code even ran. The Rust side re-checks every rule here
- * independently (defense in depth) and owns the redirect loop, response cap,
- * and timeout; this function's job is the up-front reject-fast validation
- * plus computing the effective host allowlist for this call.
+ * a plugin's request to any host beyond `self` before this code even ran. The
+ * Rust side re-checks every rule here independently (defense in depth) and
+ * owns the redirect loop, response cap, and timeout; this function's job is
+ * the up-front reject-fast validation plus computing the effective host
+ * allowlist for this call.
  */
 async function pluginFetch(
   urlValue: unknown,

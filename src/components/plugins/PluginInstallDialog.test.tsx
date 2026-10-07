@@ -58,7 +58,7 @@ describe('PluginInstallDialog', () => {
     expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument();
   });
 
-  it('warns that a package from a file was not reviewed and shows its code hash', () => {
+  it('warns about a package from a file and shows its code hash', () => {
     render(
       <PluginInstallDialog
         plugin={{
@@ -73,7 +73,7 @@ describe('PluginInstallDialog', () => {
       />
     );
 
-    expect(screen.getByText(/not the reviewed community directory/)).toBeInTheDocument();
+    expect(screen.getByText(/comes from a file on your computer/)).toBeInTheDocument();
     expect(screen.getByText('c'.repeat(64))).toBeInTheDocument();
     expect(screen.getByText('Publish note')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Replace' })).toBeInTheDocument();

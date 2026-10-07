@@ -444,7 +444,7 @@ export const SETTINGS_TABS: SettingsTabSpec[] = [
       {
         id: 'add-plugins',
         label: 'Add plugins',
-        info: 'A plugin is a folder, or a .zip of one, holding manifest.json and plugin.js. Browsing the community list contacts GitHub only when you click it.',
+        info: 'A plugin is a folder, or a .zip of one, holding manifest.json and plugin.js. There is no Larimar plugin registry yet, so browsing the community list contacts nothing.',
         rows: [
           {
             id: 'plugin-install',
