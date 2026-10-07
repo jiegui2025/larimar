@@ -233,7 +233,9 @@ pub fn serve(mut input: impl Read, mut output: impl Write) -> Result<(), String>
     Ok(())
 }
 
-pub const GECKO_EXTENSION_ID: &str = "clipper@moldavite.app";
+/// A reserved `.invalid` domain (RFC 2606) until Larimar has a domain of its
+/// own to anchor the add-on id (#22).
+pub const GECKO_EXTENSION_ID: &str = "clipper@larimar.invalid";
 
 fn is_chrome_origin(arg: &str) -> bool {
     let Some(id) = arg
@@ -555,7 +557,7 @@ mod tests {
             "--parent-window=0",
         ])));
         assert!(is_browser_host_launch(&args(&[
-            "/Users/x/Library/Application Support/Mozilla/NativeMessagingHosts/com.moldavite.clipper.json",
+            "/Users/x/Library/Application Support/Mozilla/NativeMessagingHosts/app.larimar.clipper.json",
             GECKO_EXTENSION_ID,
         ])));
 

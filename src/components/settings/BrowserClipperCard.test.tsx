@@ -30,7 +30,9 @@ describe('BrowserClipperCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /understood/i }));
 
     expect(shellOpen).toHaveBeenCalledTimes(1);
-    expect(shellOpen.mock.calls[0][0]).toContain('/tree/main/extension');
+    expect(shellOpen.mock.calls[0][0]).toBe(
+      'https://github.com/jiegui2025/larimar/tree/main/extension'
+    );
   });
 
   it('shows one set of steps at a time', async () => {
@@ -45,7 +47,21 @@ describe('BrowserClipperCard', () => {
 
     fireEvent.click(sheet.getByRole('button', { name: /^firefox$/i }));
     expect(sheet.queryByText(/Load unpacked/)).toBeNull();
-    expect(sheet.getByText(/signed by Mozilla/)).toBeVisible();
+    expect(sheet.getByText(/no signed Larimar add-on yet/)).toBeVisible();
+  });
+
+  // No release ships packaged builds yet, so the steps build from the repository.
+  it('loads the builds made from the repository, not downloads', async () => {
+    render(<BrowserClipperCard />);
+    fireEvent.click(await installButton());
+    const sheet = within(screen.getByRole('dialog'));
+
+    fireEvent.click(sheet.getByRole('button', { name: /chrome, edge & brave/i }));
+    expect(sheet.getByText('extension/dist/chrome')).toBeVisible();
+    fireEvent.click(sheet.getByRole('button', { name: /^firefox$/i }));
+    expect(sheet.getByText('extension/dist/firefox/manifest.json')).toBeVisible();
+    expect(sheet.getByText(/Load Temporary Add-on/)).toBeVisible();
+    expect(screen.getByRole('dialog').textContent).not.toMatch(/\.zip|\.xpi|Download/);
   });
 
   it('reports which browsers are paired', async () => {

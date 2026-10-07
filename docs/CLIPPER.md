@@ -26,25 +26,18 @@ becomes `… (2).md`.
 
 **Chrome, Edge & Brave**
 
-Install **Moldavite Clipper** from the
-[Chrome Web Store](https://chromewebstore.google.com/detail/ngdbcbhchiifacekdkjpjbjmegkeodig).
-Edge asks you to allow extensions from other stores the first time.
-
-Contributors can still load `dist/chrome` unpacked; the app accepts both the
-store id and the unpacked one (`CHROME_EXTENSION_IDS` in
+There is no Chrome Web Store item yet. [Build it](#building-it-yourself), open
+`chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and
+choose `extension/dist/chrome`. The `key` in its manifest gives it the one id
+the app accepts (`CHROME_EXTENSION_IDS` in
 `src-tauri/src/commands/browser_bridge.rs`).
 
 **Firefox**
 
-1. Download `moldavite-clipper.xpi` from the
-   [latest release](https://github.com/mauropereiira/Moldavite/releases/latest),
-   if that release has one.
-2. Open it in Firefox and confirm.
-
-Firefox installs only signed add-ons, so the file is signed by Mozilla. It is not
-listed in their store: the download stays here. The `.xpi` is signed and
-uploaded by hand after the release goes public (see `docs/RELEASING.md`), so a
-given release may not carry one.
+There is no signed add-on yet, and Firefox installs only signed ones. To try
+it, build it and load `extension/dist/firefox/manifest.json` from
+`about:debugging#/runtime/this-firefox` as a temporary add-on; Firefox removes
+it on restart.
 
 **Then pair it.** Open Settings → Plugins → Browser clipper and press **Connect
 browser**. Nothing can reach your notes until you do.

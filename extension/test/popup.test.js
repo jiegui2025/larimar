@@ -79,6 +79,16 @@ describe('popup', () => {
     expect(document.getElementById('clip').disabled).toBe(false);
   });
 
+  it('asks for the native host the desktop app registers', async () => {
+    stubBrowser(() => ({ ok: true, forges: ['Default'], active: 'Default' }));
+    const connect = vi.spyOn(globalThis.chrome.runtime, 'connectNative');
+
+    await import('../src/popup.js');
+    await settle();
+
+    expect(connect).toHaveBeenCalledWith('app.larimar.clipper');
+  });
+
   it('says how to pair when the host is not installed', async () => {
     stubBrowser(() => ({}), { connectThrows: true });
 
