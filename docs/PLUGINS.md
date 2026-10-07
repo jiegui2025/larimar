@@ -47,9 +47,9 @@ send data to. Installing never turns a plugin on.
   click it. Each entry links to its source code and to a report form.
 - **The website directory.** The [website directory](https://moldavite.dev/plugins#directory)
   can be searched by name, description, author, and permission. Each **Install in Moldavite** link has
-  the exact shape `moldavite://plugin/<plugin-id>`: it opens **Settings → Plugins**, fetches the
+  the exact shape `larimar://plugin/<plugin-id>`: it opens **Settings → Plugins**, fetches the
   directory, highlights the entry, and shows the confirmation. The link never carries file URLs or
-  plugin code, other `moldavite://` shapes are ignored, and the id must exist in the fetched
+  plugin code, other `larimar://` shapes are ignored, and the id must exist in the fetched
   registry.
 - **Install from .zip… or Install from folder…** for a plugin you made or downloaded. See
   [Installing from a file](#installing-from-a-file).

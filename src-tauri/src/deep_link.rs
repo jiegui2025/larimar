@@ -1,7 +1,7 @@
 //! Strict routing for URLs that open app content or plugin install prompts.
 //!
-//! Deep-link URLs are untrusted OS input. Only `moldavite://plugin/<id>`,
-//! `moldavite://note/<path>` and `moldavite://today` are routed. Plugin ids follow the installer rules;
+//! Deep-link URLs are untrusted OS input. Only `larimar://plugin/<id>`,
+//! `larimar://note/<path>` and `larimar://today` are routed. Plugin ids follow the installer rules;
 //! note paths use the validator for addressing existing visible notes.
 //! `file://` URLs (macOS Open With) and file launch arguments are admitted by
 //! `loose_files`, which decides whether they open as a Forge note or a loose file.
@@ -19,10 +19,10 @@ use crate::loose_files::{self, Admission, LooseFiles};
 use crate::validation::is_safe_existing_note_path;
 use crate::validation::is_valid_plugin_id;
 
-const PLUGIN_LINK_PREFIX: &str = "moldavite://plugin/";
-const NOTE_LINK_PREFIX: &str = "moldavite://note/";
+const PLUGIN_LINK_PREFIX: &str = "larimar://plugin/";
+const NOTE_LINK_PREFIX: &str = "larimar://note/";
 /// Opens today's daily note; the home screen widget's only route.
-const TODAY_LINK: &str = "moldavite://today";
+const TODAY_LINK: &str = "larimar://today";
 pub(crate) const DEEP_LINK_EVENT: &str = "deep-link-requested";
 const MAX_PENDING_DEEP_LINKS: usize = 64;
 /// macOS can deliver the file a launch was for after the window first drains
@@ -140,7 +140,7 @@ pub(crate) fn note_path_from_url(url: &str) -> Option<String> {
 }
 
 fn request_from_url(url: &str) -> Option<DeepLinkRequest> {
-    if url == TODAY_LINK || url == "moldavite://today/" {
+    if url == TODAY_LINK || url == "larimar://today/" {
         return Some(DeepLinkRequest::Today);
     }
     if let Some(id) = plugin_id_from_url(url) {
@@ -225,8 +225,8 @@ fn rejected_url_context(url: &str) -> (&'static str, &'static str) {
         ("plugin", "invalid plugin id or URL shape")
     } else if url.starts_with(NOTE_LINK_PREFIX) {
         ("note", "invalid note path or URL shape")
-    } else if url.starts_with("moldavite://") {
-        ("unknown", "unsupported Moldavite route")
+    } else if url.starts_with("larimar://") {
+        ("unknown", "unsupported Larimar route")
     } else {
         ("external", "unsupported URL scheme")
     }
@@ -247,7 +247,7 @@ where
         // queued: it carries an authorization code, and nothing that can be
         // exchanged for an account token belongs in the webview. It is also
         // checked against the state this process generated, because any local
-        // process can ask the OS to open a `moldavite://` URL.
+        // process can ask the OS to open a `larimar://` URL.
         if crate::wordpress::oauth::parse_callback(url).is_some() {
             crate::wordpress::handle_callback(app, url.to_owned());
             continue;
@@ -293,33 +293,53 @@ pub(crate) fn take_pending_deep_links(state: State<'_, PendingDeepLinks>) -> Vec
 mod tests {
     use super::{
         note_path_from_url, plugin_id_from_url, request_from_url, DeepLinkRequest,
-        PendingDeepLinks, MAX_PENDING_DEEP_LINKS,
+        PendingDeepLinks, MAX_PENDING_DEEP_LINKS, NOTE_LINK_PREFIX, PLUGIN_LINK_PREFIX, TODAY_LINK,
     };
+
+    /// The OS hands the app only the schemes tauri.conf.json registers, so a
+    /// prefix on any other scheme would never be routed.
+    #[test]
+    fn routes_only_the_scheme_the_app_registers() {
+        let config: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        assert_eq!(
+            config["plugins"]["deep-link"]["desktop"]["schemes"],
+            serde_json::json!(["larimar"])
+        );
+        for prefix in [
+            PLUGIN_LINK_PREFIX,
+            NOTE_LINK_PREFIX,
+            TODAY_LINK,
+            crate::wordpress::oauth::REDIRECT_URI,
+        ] {
+            assert!(prefix.starts_with("larimar://"), "{prefix}");
+        }
+    }
 
     #[test]
     fn routes_only_the_plugin_install_shape() {
         assert_eq!(
-            plugin_id_from_url("moldavite://plugin/publish-wordpress"),
+            plugin_id_from_url("larimar://plugin/publish-wordpress"),
             Some("publish-wordpress")
         );
-        assert_eq!(plugin_id_from_url("moldavite://plugin/a"), Some("a"));
+        assert_eq!(plugin_id_from_url("larimar://plugin/a"), Some("a"));
     }
 
     #[test]
     fn routes_today_exactly_and_nothing_that_looks_like_it() {
         assert_eq!(
-            request_from_url("moldavite://today"),
+            request_from_url("larimar://today"),
             Some(DeepLinkRequest::Today)
         );
         assert_eq!(
-            request_from_url("moldavite://today/"),
+            request_from_url("larimar://today/"),
             Some(DeepLinkRequest::Today)
         );
         for url in [
-            "moldavite://today?x=1",
-            "moldavite://todays",
-            "moldavite://Today",
-            "moldavite://today/extra",
+            "larimar://today?x=1",
+            "larimar://todays",
+            "larimar://Today",
+            "larimar://today/extra",
         ] {
             assert_eq!(request_from_url(url), None, "unexpected route for {url}");
         }
@@ -328,17 +348,17 @@ mod tests {
     #[test]
     fn routes_root_and_foldered_note_paths() {
         assert_eq!(
-            request_from_url("moldavite://note/valid-id.md"),
+            request_from_url("larimar://note/valid-id.md"),
             Some(DeepLinkRequest::Note {
                 path: "valid-id.md".to_string(),
             })
         );
         assert_eq!(
-            note_path_from_url("moldavite://note/Root%20note.md"),
+            note_path_from_url("larimar://note/Root%20note.md"),
             Some("Root note.md".to_string())
         );
         assert_eq!(
-            note_path_from_url("moldavite://note/Projects%2FRoadmap.md"),
+            note_path_from_url("larimar://note/Projects%2FRoadmap.md"),
             Some("Projects/Roadmap.md".to_string())
         );
     }
@@ -346,7 +366,7 @@ mod tests {
     #[test]
     fn decodes_percent_encoded_unicode_names() {
         assert_eq!(
-            note_path_from_url("moldavite://note/Projects%2Fcaf%C3%A9%20notes.md"),
+            note_path_from_url("larimar://note/Projects%2Fcaf%C3%A9%20notes.md"),
             Some("Projects/café notes.md".to_string())
         );
     }
@@ -354,13 +374,13 @@ mod tests {
     #[test]
     fn rejects_unsafe_note_paths() {
         for url in [
-            "moldavite://note/../evil.md",
-            "moldavite://note/Projects%2F..%2Fevil.md",
-            "moldavite://note/%2Fabsolute.md",
-            "moldavite://note/C%3A%2Fevil.md",
-            "moldavite://note/C:/evil.md",
-            "moldavite://note/Projects%5Cevil.md",
-            "moldavite://note/.trash%2Fevil.md",
+            "larimar://note/../evil.md",
+            "larimar://note/Projects%2F..%2Fevil.md",
+            "larimar://note/%2Fabsolute.md",
+            "larimar://note/C%3A%2Fevil.md",
+            "larimar://note/C:/evil.md",
+            "larimar://note/Projects%5Cevil.md",
+            "larimar://note/.trash%2Fevil.md",
         ] {
             assert_eq!(note_path_from_url(url), None, "unexpected route for {url}");
         }
@@ -369,14 +389,14 @@ mod tests {
     #[test]
     fn rejects_malformed_or_unsupported_note_urls() {
         for url in [
-            "moldavite://note/",
-            "moldavite://note/no-extension",
-            "moldavite://note/bad%2",
-            "moldavite://note/bad%GG.md",
-            "moldavite://note/valid.md?query=true",
-            "moldavite://note/valid.md#fragment",
+            "larimar://note/",
+            "larimar://note/no-extension",
+            "larimar://note/bad%2",
+            "larimar://note/bad%GG.md",
+            "larimar://note/valid.md?query=true",
+            "larimar://note/valid.md#fragment",
             "https://note/valid.md",
-            "MOLDAVITE://note/valid.md",
+            "LARIMAR://note/valid.md",
         ] {
             assert_eq!(note_path_from_url(url), None, "unexpected route for {url}");
         }
@@ -385,17 +405,17 @@ mod tests {
     #[test]
     fn rejects_other_routes_and_invalid_plugin_ids() {
         for url in [
-            "moldavite://plugin/",
-            "moldavite://plugin/-leading-hyphen",
-            "moldavite://plugin/Uppercase",
-            "moldavite://plugin/has space",
-            "moldavite://plugin/valid-id/extra",
-            "moldavite://plugin/valid-id?confirm=true",
-            "moldavite://plugin/valid-id#fragment",
-            "moldavite://plugins/valid-id",
-            "moldavite://note/valid-id.md",
+            "larimar://plugin/",
+            "larimar://plugin/-leading-hyphen",
+            "larimar://plugin/Uppercase",
+            "larimar://plugin/has space",
+            "larimar://plugin/valid-id/extra",
+            "larimar://plugin/valid-id?confirm=true",
+            "larimar://plugin/valid-id#fragment",
+            "larimar://plugins/valid-id",
+            "larimar://note/valid-id.md",
             "https://plugin/valid-id",
-            "MOLDAVITE://plugin/valid-id",
+            "LARIMAR://plugin/valid-id",
         ] {
             assert_eq!(plugin_id_from_url(url), None, "unexpected route for {url}");
         }
@@ -450,8 +470,8 @@ mod tests {
         super::route_urls(
             app.handle(),
             [
-                secret_url.replacen("file:", "moldavite:", 1),
-                secret_url.replacen("file://", "moldavite://localhost", 1),
+                secret_url.replacen("file:", "larimar:", 1),
+                secret_url.replacen("file://", "larimar://localhost", 1),
                 url("Read me.md"),
                 url("notes.txt"),
             ],

@@ -36,12 +36,12 @@ export function buildMcpSetupSnippet(client: McpClient, binaryPath: string): str
 
   const server = { command: binaryPath, args: ['--mcp'] };
   if (client === 'claude-code') {
-    return `claude mcp add moldavite -- "${binaryPath}" --mcp`;
+    return `claude mcp add larimar -- "${binaryPath}" --mcp`;
   }
   if (client === 'generic') {
-    return JSON.stringify({ moldavite: server }, null, 2);
+    return JSON.stringify({ larimar: server }, null, 2);
   }
-  return JSON.stringify({ mcpServers: { moldavite: server } }, null, 2);
+  return JSON.stringify({ mcpServers: { larimar: server } }, null, 2);
 }
 
 /** `.gitignore` content for a Forge: app-managed dirs + macOS noise. */

@@ -5,7 +5,7 @@
 //! `calendar:google:refresh_token`) so one feature can never read another's
 //! secret by guessing a key. Nothing here ever logs a value.
 
-const KEYRING_SERVICE: &str = "Moldavite";
+const KEYRING_SERVICE: &str = "Larimar";
 
 /// Indirection so callers can be tested without touching the real keychain.
 pub(crate) trait SecretStore {
@@ -43,5 +43,15 @@ impl SecretStore for KeychainSecretStore {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(e) => Err(format!("could not delete secret: {e}")),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /// Upstream's app keeps its secrets under its own service name; sharing
+    /// one would let either app read the other's tokens.
+    #[test]
+    fn secrets_live_under_larimars_own_keyring_service() {
+        assert_eq!(super::KEYRING_SERVICE, "Larimar");
     }
 }

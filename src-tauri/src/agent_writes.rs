@@ -41,7 +41,7 @@ struct AgentWriteMarker {
 /// Resolve the global marker spool without depending on an initialized Tauri app.
 /// `None` is a normal outcome on platforms where no config directory is available.
 pub(crate) fn spool_dir() -> Option<PathBuf> {
-    dirs::config_dir().map(|dir| dir.join("Moldavite").join("agent-writes"))
+    dirs::config_dir().map(|dir| dir.join(crate::paths::APP_DIR_NAME).join("agent-writes"))
 }
 
 fn now_ms() -> u64 {

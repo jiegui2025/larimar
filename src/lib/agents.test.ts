@@ -20,8 +20,8 @@ describe('MCP settings IPC wrappers', () => {
   });
 
   it('loads the app binary path and write setting', async () => {
-    mockInvoke.mockResolvedValueOnce('/Applications/Moldavite.app/Contents/MacOS/moldavite');
-    await expect(getAppBinaryPath()).resolves.toContain('/Moldavite.app/');
+    mockInvoke.mockResolvedValueOnce('/Applications/Larimar.app/Contents/MacOS/larimar');
+    await expect(getAppBinaryPath()).resolves.toContain('/Larimar.app/');
     expect(mockInvoke).toHaveBeenLastCalledWith('get_app_binary_path', undefined);
 
     mockInvoke.mockResolvedValueOnce(false);
@@ -36,25 +36,25 @@ describe('MCP settings IPC wrappers', () => {
 });
 
 describe('buildMcpSetupSnippet', () => {
-  const path = '/Applications/Moldavite.app/Contents/MacOS/moldavite';
+  const path = '/Applications/Larimar.app/Contents/MacOS/larimar';
 
   it('builds the Claude Code CLI command', () => {
     expect(buildMcpSetupSnippet('claude-code', path)).toBe(
-      `claude mcp add moldavite -- "${path}" --mcp`
+      `claude mcp add larimar -- "${path}" --mcp`
     );
   });
 
   it('builds the Claude Desktop and Cursor mcpServers document', () => {
     for (const client of ['claude-desktop', 'cursor'] as const) {
       expect(JSON.parse(buildMcpSetupSnippet(client, path))).toEqual({
-        mcpServers: { moldavite: { command: path, args: ['--mcp'] } },
+        mcpServers: { larimar: { command: path, args: ['--mcp'] } },
       });
     }
   });
 
   it('builds a generic server entry without a client-specific wrapper', () => {
     expect(JSON.parse(buildMcpSetupSnippet('generic', path))).toEqual({
-      moldavite: { command: path, args: ['--mcp'] },
+      larimar: { command: path, args: ['--mcp'] },
     });
   });
 });

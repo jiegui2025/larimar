@@ -154,7 +154,10 @@ fn targets(home: &Path) -> Vec<(&'static str, PathBuf, Flavor)> {
 fn targets(home: &Path) -> Vec<(&'static str, PathBuf, Flavor)> {
     // Windows keeps the manifest wherever we like and points at it from the
     // registry, so all four browsers share one directory of our own.
-    let dir = home.join("AppData/Roaming/Moldavite/NativeMessagingHosts");
+    let dir = home
+        .join("AppData/Roaming")
+        .join(crate::paths::APP_DIR_NAME)
+        .join("NativeMessagingHosts");
     vec![
         ("Chrome", dir.clone(), Flavor::Chromium),
         ("Edge", dir.clone(), Flavor::Chromium),

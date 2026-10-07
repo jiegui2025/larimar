@@ -3,7 +3,7 @@
 //!
 //! # Where it lives
 //!
-//! `<data_dir>/Moldavite/activity/<sha256 of the canonical Forge path>/activity.sqlite`,
+//! `<data_dir>/Larimar/activity/<sha256 of the canonical Forge path>/activity.sqlite`,
 //! beside the keyword index and never inside the Forge: a database written in
 //! place inside iCloud or Dropbox gets corrupted, and the record is this
 //! device's own. A synced Forge therefore has one log per device. Deleting a
@@ -199,7 +199,7 @@ fn log_root() -> PathBuf {
 fn log_root() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(std::env::temp_dir)
-        .join("Moldavite")
+        .join(crate::paths::APP_DIR_NAME)
         .join("activity")
 }
 

@@ -1,4 +1,4 @@
-//! WordPress.com OAuth for an installed app, over the `moldavite://` scheme.
+//! WordPress.com OAuth for an installed app, over the `larimar://` scheme.
 //!
 //! WordPress.com supports neither PKCE nor a loopback-with-any-port redirect,
 //! so this cannot reuse the Google flow in `calendar/oauth.rs`. It uses the
@@ -11,7 +11,7 @@
 //!
 //! A loopback redirect can only be reached by something that already guessed a
 //! random port on this machine. A custom scheme cannot: **any local process can
-//! ask the OS to open `moldavite://oauth/wordpress?code=…`**, and the OS will
+//! ask the OS to open `larimar://oauth/wordpress?code=…`**, and the OS will
 //! hand it to us. Without a check, an attacker feeds us an authorization code
 //! for *their* WordPress.com account and the user silently publishes their
 //! notes into it.
@@ -32,8 +32,8 @@ use tauri::{AppHandle, Emitter, Manager, Runtime};
 use crate::secrets::{KeychainSecretStore, SecretStore};
 
 /// Registered on the WordPress.com application. Must match byte for byte.
-pub const REDIRECT_URI: &str = "moldavite://oauth/wordpress";
-pub(crate) const CALLBACK_PREFIX: &str = "moldavite://oauth/wordpress";
+pub const REDIRECT_URI: &str = "larimar://oauth/wordpress";
+pub(crate) const CALLBACK_PREFIX: &str = "larimar://oauth/wordpress";
 
 const AUTHORIZE_URL: &str = "https://public-api.wordpress.com/oauth2/authorize";
 const TOKEN_URL: &str = "https://public-api.wordpress.com/oauth2/token";
@@ -144,7 +144,7 @@ pub(crate) fn parse_callback(
     url: &str,
 ) -> Option<(Option<String>, Option<String>, Option<String>)> {
     let rest = url.strip_prefix(CALLBACK_PREFIX)?;
-    // Accept both `moldavite://oauth/wordpress?…` and a trailing-slash variant,
+    // Accept both `larimar://oauth/wordpress?…` and a trailing-slash variant,
     // because the OS and the browser do not agree on normalising these.
     let query = match rest.strip_prefix('?') {
         Some(q) => q,
@@ -338,7 +338,7 @@ mod tests {
         assert!(url.starts_with(AUTHORIZE_URL));
         assert!(url.contains("client_id=abc123"));
         assert!(url.contains("response_type=code"));
-        assert!(url.contains("redirect_uri=moldavite%3A%2F%2Foauth%2Fwordpress"));
+        assert!(url.contains("redirect_uri=larimar%3A%2F%2Foauth%2Fwordpress"));
         assert!(url.contains("scope=global"));
         assert!(url.contains("state=st.ate"));
     }
@@ -356,19 +356,19 @@ mod tests {
 
     #[test]
     fn parses_code_and_state_from_a_callback() {
-        let parsed = parse_callback("moldavite://oauth/wordpress?code=abc&state=xyz");
+        let parsed = parse_callback("larimar://oauth/wordpress?code=abc&state=xyz");
         assert_eq!(parsed, Some((Some("abc".into()), Some("xyz".into()), None)));
     }
 
     #[test]
     fn parses_the_trailing_slash_variant_the_os_may_produce() {
-        let parsed = parse_callback("moldavite://oauth/wordpress/?code=abc&state=xyz");
+        let parsed = parse_callback("larimar://oauth/wordpress/?code=abc&state=xyz");
         assert_eq!(parsed, Some((Some("abc".into()), Some("xyz".into()), None)));
     }
 
     #[test]
     fn parses_a_provider_error() {
-        let parsed = parse_callback("moldavite://oauth/wordpress?error=access_denied&state=xyz");
+        let parsed = parse_callback("larimar://oauth/wordpress?error=access_denied&state=xyz");
         assert_eq!(
             parsed,
             Some((None, Some("xyz".into()), Some("access_denied".into())))
@@ -377,22 +377,19 @@ mod tests {
 
     #[test]
     fn ignores_urls_that_are_not_the_callback() {
-        assert_eq!(
-            parse_callback("moldavite://plugin/moldavite-wordpress"),
-            None
-        );
-        assert_eq!(parse_callback("moldavite://note/a.md"), None);
+        assert_eq!(parse_callback("larimar://plugin/moldavite-wordpress"), None);
+        assert_eq!(parse_callback("larimar://note/a.md"), None);
         assert_eq!(parse_callback("https://example.com/?code=abc"), None);
         // A near-miss host must not be treated as ours.
         assert_eq!(
-            parse_callback("moldavite://oauth/wordpress.evil?code=a"),
+            parse_callback("larimar://oauth/wordpress.evil?code=a"),
             None
         );
     }
 
     #[test]
     fn percent_decodes_values() {
-        let parsed = parse_callback("moldavite://oauth/wordpress?code=a%2Fb%20c&state=s");
+        let parsed = parse_callback("larimar://oauth/wordpress?code=a%2Fb%20c&state=s");
         assert_eq!(parsed.unwrap().0, Some("a/b c".into()));
     }
 

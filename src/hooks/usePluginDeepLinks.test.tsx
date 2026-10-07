@@ -123,8 +123,8 @@ describe('app deep links', () => {
     };
     const foldered = { ...root, id: folderedNote.path, title: 'café notes' };
 
-    expect(noteDeepLink(root)).toBe('moldavite://note/Root%20note.md');
-    expect(noteDeepLink(foldered)).toBe('moldavite://note/Projects%2Fcaf%C3%A9%20notes.md');
+    expect(noteDeepLink(root)).toBe('larimar://note/Root%20note.md');
+    expect(noteDeepLink(foldered)).toBe('larimar://note/Projects%2Fcaf%C3%A9%20notes.md');
     expect(
       noteDeepLink({
         ...root,
@@ -132,7 +132,7 @@ describe('app deep links', () => {
         isDaily: true,
         date: '2026-08-14',
       })
-    ).toBe('moldavite://note/daily%2F2026-08-14.md');
+    ).toBe('larimar://note/daily%2F2026-08-14.md');
     expect(
       noteDeepLink({
         ...root,
@@ -140,7 +140,7 @@ describe('app deep links', () => {
         isWeekly: true,
         week: '2026-W33',
       })
-    ).toBe('moldavite://note/weekly%2F2026-W33.md');
+    ).toBe('larimar://note/weekly%2F2026-W33.md');
   });
 
   it('opens a validated cold-start note through the normal tab flow', async () => {

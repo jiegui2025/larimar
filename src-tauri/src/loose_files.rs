@@ -317,7 +317,7 @@ fn display_parent(path: &Path, home: Option<&Path>) -> String {
 }
 
 /// The Forge address of a note inside the active Forge, in the shape a
-/// `moldavite://note/` link resolves: `notes/<path>`, `daily/<name>`, `weekly/<name>`.
+/// `larimar://note/` link resolves: `notes/<path>`, `daily/<name>`, `weekly/<name>`.
 fn forge_note_rel(canonical: &Path, forge_root: &Path) -> Option<String> {
     let root = dunce::canonicalize(forge_root).ok()?;
     let parts = canonical
@@ -1190,7 +1190,7 @@ mod tests {
             "-psn_0_1234",
             "notes/today.md",
             "/abs/file.md",
-            "moldavite://today",
+            "larimar://today",
             "",
         ];
         assert_eq!(
@@ -1203,8 +1203,8 @@ mod tests {
     #[test]
     fn only_file_urls_can_supply_a_local_path() {
         for url in [
-            "moldavite:///Users/x/diary.md",
-            "moldavite://localhost/Users/x/diary.md",
+            "larimar:///Users/x/diary.md",
+            "larimar://localhost/Users/x/diary.md",
         ] {
             assert_eq!(file_url_path(url), None, "{url}");
         }
