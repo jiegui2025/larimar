@@ -1,0 +1,3 @@
+# Files allowed over the 1 MiB limit enforced by scripts/check-large-files.mjs.
+# One per line: path, then "# reason". Remove an entry when its file goes.
+branding/Moldavite-brand-kit.zip  # inherited brand kit, deleted by the visible rebrand (#16)

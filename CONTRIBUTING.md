@@ -154,6 +154,21 @@ verification. Include:
 Do not include unrelated formatting or refactors. Make sure tests, lint, formatting,
 and relevant Rust checks are green before requesting review.
 
+### Large files
+
+CI fails a pull request that adds or changes a file over 1 MiB, because git
+keeps every blob forever. Builds and media belong in releases or Actions
+artifacts. A deliberate exception goes in `.github/large-files-allowlist` as
+`path  # reason`. To catch it before committing, install the same check as a
+hook. It is shared by every worktree and replaces an existing pre-commit hook;
+worktrees whose branch predates the script skip it:
+
+```bash
+hook="$(git rev-parse --git-common-dir)/hooks/pre-commit"
+printf '#!/bin/sh\n[ -f scripts/check-large-files.mjs ] || exit 0\nexec node scripts/check-large-files.mjs --staged\n' > "$hook"
+chmod +x "$hook"
+```
+
 ## Good first areas
 
 - Improve focused documentation or examples where an invariant is already tested.
