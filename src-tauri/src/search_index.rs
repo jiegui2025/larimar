@@ -33,8 +33,10 @@
 //! Modelled on [`crate::semantic`]. Note commands, the MCP tools and the
 //! filesystem watcher call the cheap [`note_changed`] / [`note_removed`] /
 //! [`note_renamed`] / [`folder_changed_in`] hooks, which hand the work to one
-//! background worker thread so a save is never blocked. Startup, a Forge
-//! switch, the rebuild command and a 24-hour timer run [`reconcile`], which
+//! background worker thread so a save is never blocked. A hook only names the
+//! paths; the worker reads them off disk when it runs the job, so a job that
+//! lands late or out of order still leaves the index matching disk. Startup, a
+//! Forge switch, the rebuild command and a 24-hour timer run [`reconcile`], which
 //! compares every note's `(mtime, size)` against the table and only hashes the
 //! ones that differ. A missing file, a `schema_version` mismatch or a
 //! `forge_root` mismatch drops the tables, and the index is not trusted again
@@ -360,6 +362,16 @@ fn meta_set(conn: &Connection, key: &str, value: &str) -> rusqlite::Result<()> {
     Ok(())
 }
 
+/// A locked note owns both spellings of its name, so a `.locked` twin, here or
+/// still only in iCloud, means the plaintext beside it — an interrupted lock —
+/// is neither indexed nor served.
+fn has_locked_twin(abs: &Path) -> bool {
+    let mut locked = abs.as_os_str().to_owned();
+    locked.push(".locked");
+    let locked = PathBuf::from(locked);
+    fs::symlink_metadata(&locked).is_ok() || crate::cloud_forge::is_remote_name(&locked)
+}
+
 /// One note as the index stores it.
 struct NoteRow {
     path: String,
@@ -382,6 +394,7 @@ fn read_row(forge_root: &Path, rel: &str) -> Option<NoteRow> {
     if metadata.file_type().is_symlink()
         || !metadata.is_file()
         || crate::cloud_forge::is_evicted(&abs)
+        || has_locked_twin(&abs)
     {
         return None;
     }
@@ -440,6 +453,12 @@ fn delete_row(conn: &Connection, path: &str) -> rusqlite::Result<()> {
     Ok(())
 }
 
+/// What a hook reports. A job names paths, not what to do with them: the
+/// worker reads each one off disk when it gets there. Removals are queued from
+/// several threads (note commands, the watcher, a search that met a stale row)
+/// and by the MCP process, so one can land after the note came back. Trusting
+/// it would drop a restored note from search until the next reconcile;
+/// re-reading the file means whichever job runs last leaves the row right.
 enum Job {
     Changed(PathBuf, String),
     Removed(PathBuf, String),
@@ -472,11 +491,22 @@ fn worker() -> Option<&'static Sender<Job>> {
         .as_ref()
 }
 
+/// How many times a job is tried again when another connection (the MCP
+/// process) holds the write lock past [`BUSY_TIMEOUT`]. Every attempt re-reads
+/// the files, so a retry is as good as the first try, in any order. With
+/// [`BUSY_BACKOFF`] a job is given up after about three seconds.
+const BUSY_RETRIES: u32 = 6;
+/// The pause before the first retry, doubled before each one after it.
+const BUSY_BACKOFF: Duration = Duration::from_millis(25);
+
 fn apply(job: Job) {
+    // `true` reads the path off disk; `false` drops its row unread.
     let (forge_root, work): (PathBuf, Vec<(String, bool)>) = match job {
-        Job::Changed(root, rel) => (root, vec![(rel, true)]),
-        Job::Removed(root, rel) => (root, vec![(rel, false)]),
-        Job::Renamed(root, old, new) => (root, vec![(old, false), (new, true)]),
+        Job::Changed(root, rel) | Job::Removed(root, rel) => (root, vec![(rel, true)]),
+        Job::Renamed(root, old, new) => {
+            let respelled = respelled_in_place(&root, &old, &new);
+            (root, vec![(old, !respelled), (new, true)])
+        }
         Job::Folder(root, rel_dir) => {
             if let Err(error) = reconcile_now(&handle(&root), &root, Some(&rel_dir)) {
                 log::warn!("[search index] folder update failed: {error}");
@@ -485,18 +515,55 @@ fn apply(job: Job) {
         }
     };
     let index = handle(&forge_root);
-    let result = index.with_conn(true, |conn| {
-        for (rel, upsert) in &work {
-            match upsert.then(|| read_row(&forge_root, rel)).flatten() {
-                Some(row) => write_row(conn, &row)?,
-                None => delete_row(conn, rel)?,
+    let mut attempt = 0;
+    let error = loop {
+        match index.with_conn(true, |conn| Ok(sync_rows(conn, &forge_root, &work))) {
+            Ok(Ok(())) => return,
+            Ok(Err(error))
+                if error.sqlite_error_code() == Some(rusqlite::ErrorCode::DatabaseBusy)
+                    && attempt < BUSY_RETRIES =>
+            {
+                std::thread::sleep(BUSY_BACKOFF * 2u32.pow(attempt));
+                attempt += 1;
             }
+            Ok(Err(error)) => break error.to_string(),
+            Err(error) => break error,
         }
-        Ok(())
-    });
-    if let Err(error) = result {
-        log::warn!("[search index] update failed: {error}");
+    };
+    log::warn!("[search index] update failed: {error}");
+}
+
+/// Bring each path's row in line with the file. The write lock is taken
+/// before the files are read, so the MCP process cannot commit an older
+/// reading of one between this read and this write.
+fn sync_rows(
+    conn: &Connection,
+    forge_root: &Path,
+    work: &[(String, bool)],
+) -> rusqlite::Result<()> {
+    let tx = rusqlite::Transaction::new_unchecked(conn, rusqlite::TransactionBehavior::Immediate)?;
+    for (rel, read) in work {
+        match read.then(|| read_row(forge_root, rel)).flatten() {
+            Some(row) => write_row(&tx, &row)?,
+            None => delete_row(&tx, rel)?,
+        }
     }
+    tx.commit()
+}
+
+/// `old` and `new` differ only in the case or Unicode form of the note's name
+/// or of folders above it, and still open one file: what a case-only rename of
+/// the note or its folder leaves on a case-insensitive volume (the macOS and
+/// Windows default). The old spelling must then go unread, or the note would
+/// be indexed under both.
+fn respelled_in_place(forge_root: &Path, old: &str, new: &str) -> bool {
+    old != new
+        && old.split('/').count() == new.split('/').count()
+        && old
+            .split('/')
+            .zip(new.split('/'))
+            .all(|(a, b)| crate::wiki::same_note_name(a, b))
+        && crate::persist::same_file(&forge_root.join(old), &forge_root.join(new))
 }
 
 fn enqueue(job: Job) {
@@ -539,8 +606,8 @@ pub(crate) fn note_removed_in(rel_path: &str, forge_root: PathBuf) {
     enqueue(Job::Removed(forge_root, rel_path.to_string()));
 }
 
-/// A note moved: the old row goes and the new path is read fresh, both on the
-/// same worker so the two can never race each other.
+/// A note moved: both paths are read fresh in one job, so the old row goes and
+/// the new one appears in the same transaction.
 pub(crate) fn note_renamed(old_rel: &str, new_rel: &str) {
     if let Ok(root) = crate::paths::get_notes_dir() {
         note_renamed_in(old_rel, new_rel, root);
@@ -614,16 +681,10 @@ fn hit_fields(body: &str, full_term: &str, terms: &[String]) -> (String, usize, 
 
 /// A row can outlive its plaintext: the MCP process never reconciles, and a
 /// note locked on another synced machine changes here only when this process
-/// notices. A locked note owns both spellings of its name, so a `.locked` twin
-/// means the stored body must not be served either.
+/// notices.
 fn still_plaintext(forge_root: &Path, rel: &str) -> bool {
     let abs = forge_root.join(rel);
-    let mut locked = abs.clone().into_os_string();
-    locked.push(".locked");
-    let locked = PathBuf::from(locked);
-    fs::symlink_metadata(&abs).is_ok_and(|metadata| metadata.is_file())
-        && fs::symlink_metadata(&locked).is_err()
-        && !crate::cloud_forge::is_remote_name(&locked)
+    fs::symlink_metadata(&abs).is_ok_and(|metadata| metadata.is_file()) && !has_locked_twin(&abs)
 }
 
 /// Answer a keyword search from the index.
@@ -1134,9 +1195,10 @@ mod tests {
             vec!["notes/alpha.md", "notes/gamma.md"]
         );
 
-        // Remove drops it.
+        // Remove drops it once the file is gone, as every caller does it.
+        fs::remove_file(forge.path().join("notes/gamma.md")).unwrap();
         apply(Job::Removed(forge.path().into(), "notes/gamma.md".into()));
-        assert_eq!(index_paths(&forge, "quick"), vec!["notes/alpha.md"]);
+        assert_eq!(rows(&forge), vec!["notes/alpha.md"]);
     }
 
     #[test]
@@ -1328,6 +1390,11 @@ mod tests {
         forge.write("notes/twin.md.locked", "ciphertext");
 
         assert_eq!(index_paths(&forge, "confidential"), vec!["notes/open.md"]);
+        // The query queues both stale rows for removal, and the twin's
+        // plaintext must not be read back in while its locked spelling exists.
+        eventually("dropped the stale rows", || {
+            rows(&forge) == ["notes/open.md"]
+        });
     }
 
     #[test]
@@ -1774,6 +1841,271 @@ mod tests {
             !index_paths(&forge, "perishable").is_empty()
         });
         assert_eq!(index_paths(&forge, "perishable"), vec!["notes/doomed.md"]);
+    }
+
+    /// Every path in the `notes` table, sorted. Unlike [`index_paths`] this
+    /// sees rows a query would hide because their file is gone.
+    fn rows(forge: &TempForge) -> Vec<String> {
+        handle(forge.path())
+            .with_conn(false, |conn| {
+                let mut stmt = conn.prepare("SELECT path FROM notes ORDER BY path")?;
+                let paths = stmt.query_map([], |row| row.get::<_, String>(0))?;
+                paths.collect()
+            })
+            .unwrap()
+    }
+
+    /// The rows a fresh index of the Forge would hold, sorted.
+    fn notes_on_disk(forge: &TempForge) -> Vec<String> {
+        let mut paths: Vec<String> = crate::semantic::scan_note_paths(forge.path())
+            .into_iter()
+            .filter_map(|(_, rel)| read_row(forge.path(), &rel).map(|row| row.path))
+            .collect();
+        paths.sort();
+        paths
+    }
+
+    /// Wait until the worker has applied every job queued so far. It runs
+    /// them in order, so a note queued now is indexed after all of them.
+    fn drain_worker(forge: &TempForge) {
+        static MARKERS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let rel = format!(
+            "notes/drained-{}.md",
+            MARKERS.fetch_add(1, Ordering::SeqCst)
+        );
+        forge.write(&rel, "drained");
+        note_changed_in(&rel, forge.path().into());
+        for _ in 0..2400 {
+            if rows(forge).contains(&rel) {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(25));
+        }
+        panic!("the worker never caught up (waited 60s)");
+    }
+
+    /// The jobs for one note can land in either order: trashing queues a
+    /// removal, and so do the watcher and a search that meets the stale row,
+    /// each from its own thread, while restoring queues a change. Whichever
+    /// runs last, the row must match the file.
+    #[test]
+    fn hook_jobs_leave_the_row_matching_disk_whatever_order_they_run_in() {
+        let forge = TempForge::new("job-order");
+        let note = "notes/doomed.md";
+        forge.write(note, "perishable needle");
+        reconcile(forge.path()).unwrap();
+        fs::create_dir_all(forge.path().join(".trash")).unwrap();
+        let live = forge.path().join(note);
+        let trashed = forge.path().join(".trash/doomed.md");
+        let changed = || Job::Changed(forge.path().into(), note.into());
+        let removed = || Job::Removed(forge.path().into(), note.into());
+
+        for restored in [true, false] {
+            for removal_last in [true, false] {
+                fs::rename(&live, &trashed).unwrap();
+                if restored {
+                    fs::rename(&trashed, &live).unwrap();
+                }
+                if removal_last {
+                    apply(changed());
+                    apply(removed());
+                } else {
+                    apply(removed());
+                    apply(changed());
+                }
+                assert_eq!(
+                    rows(&forge),
+                    notes_on_disk(&forge),
+                    "restored: {restored}, removal ran last: {removal_last}"
+                );
+                if !restored {
+                    fs::rename(&trashed, &live).unwrap();
+                }
+            }
+        }
+    }
+
+    /// A note renamed away and back again ends where it started, even when
+    /// the two rename jobs run in the opposite order.
+    #[test]
+    fn rename_jobs_run_out_of_order_leave_the_name_on_disk() {
+        let forge = TempForge::new("rename-order");
+        forge.write("notes/first.md", "wandering needle");
+        reconcile(forge.path()).unwrap();
+        let first = forge.path().join("notes/first.md");
+        let second = forge.path().join("notes/second.md");
+        fs::rename(&first, &second).unwrap();
+        fs::rename(&second, &first).unwrap();
+
+        apply(Job::Renamed(
+            forge.path().into(),
+            "notes/second.md".into(),
+            "notes/first.md".into(),
+        ));
+        apply(Job::Renamed(
+            forge.path().into(),
+            "notes/first.md".into(),
+            "notes/second.md".into(),
+        ));
+        assert_eq!(rows(&forge), vec!["notes/first.md"]);
+    }
+
+    /// On a case-insensitive volume (the macOS and Windows default) the old
+    /// spelling still opens the renamed file, and must not be indexed again
+    /// beside the new one.
+    #[test]
+    fn a_case_only_rename_job_leaves_one_row() {
+        let forge = TempForge::new("rename-case");
+        forge.write("notes/Shouting.md", "volume needle");
+        reconcile(forge.path()).unwrap();
+        fs::rename(
+            forge.path().join("notes/Shouting.md"),
+            forge.path().join("notes/shouting.md"),
+        )
+        .unwrap();
+
+        apply(Job::Renamed(
+            forge.path().into(),
+            "notes/Shouting.md".into(),
+            "notes/shouting.md".into(),
+        ));
+        assert_eq!(rows(&forge), vec!["notes/shouting.md"]);
+    }
+
+    /// The same for a case-only rename of a folder, which queues one rename
+    /// job per note inside it. Only a case-insensitive volume exercises the
+    /// guard: on a case-sensitive one the old spelling is simply gone.
+    #[test]
+    fn a_case_only_folder_rename_job_leaves_one_row() {
+        let forge = TempForge::new("rename-folder-case");
+        forge.write("notes/Projects/plan.md", "volume needle");
+        reconcile(forge.path()).unwrap();
+        fs::rename(
+            forge.path().join("notes/Projects"),
+            forge.path().join("notes/projects"),
+        )
+        .unwrap();
+
+        apply(Job::Renamed(
+            forge.path().into(),
+            "notes/Projects/plan.md".into(),
+            "notes/projects/plan.md".into(),
+        ));
+        assert_eq!(rows(&forge), vec!["notes/projects/plan.md"]);
+    }
+
+    /// Another connection to the index file, as the MCP process has, holding
+    /// the write lock while a job runs. The job must read the note only once
+    /// it holds the lock itself, or a newer reading the other process commits
+    /// meanwhile is overwritten by an older one; and when the lock is held past
+    /// the busy timeout the job must wait it out rather than be dropped.
+    #[test]
+    fn a_job_reads_the_note_under_the_write_lock_and_outlasts_a_busy_one() {
+        let forge = TempForge::new("busy");
+        let note = "notes/alpha.md";
+        forge.write(note, "first draft");
+        reconcile(forge.path()).unwrap();
+        let other = Connection::open(&handle(forge.path()).file).unwrap();
+        other.busy_timeout(BUSY_TIMEOUT).unwrap();
+        let run_job = || {
+            let root = forge.path().to_path_buf();
+            std::thread::spawn(move || apply(Job::Changed(root, note.into())))
+        };
+
+        // Within the busy timeout: while the job waits, the other process
+        // saves the note and indexes the new text.
+        other.execute_batch("BEGIN IMMEDIATE").unwrap();
+        let job = run_job();
+        std::thread::sleep(Duration::from_millis(50));
+        forge.write(note, "second draft");
+        write_row(&other, &read_row(forge.path(), note).unwrap()).unwrap();
+        other.execute_batch("COMMIT").unwrap();
+        job.join().unwrap();
+        assert_eq!(stored::<String>(&forge, "body"), "second draft");
+
+        // Past the busy timeout: the other process holds the lock three times
+        // that long, then commits a reading older than the file.
+        let older = read_row(forge.path(), note).unwrap();
+        forge.write(note, "third draft");
+        other.execute_batch("BEGIN IMMEDIATE").unwrap();
+        let job = run_job();
+        std::thread::sleep(BUSY_TIMEOUT * 3);
+        write_row(&other, &older).unwrap();
+        other.execute_batch("COMMIT").unwrap();
+        job.join().unwrap();
+        assert_eq!(stored::<String>(&forge, "body"), "third draft");
+    }
+
+    /// Trash and restore one note 1,000 times through the hooks, while a
+    /// search drops the rows it finds stale and a second writer (the watcher,
+    /// or the MCP process with its own queue) applies what it saw a few
+    /// moments earlier. However the jobs interleave, the index must end up
+    /// matching disk.
+    #[test]
+    fn racing_trash_and_restore_leaves_the_index_matching_disk() {
+        const CYCLES: usize = 1_000;
+        const LAG: usize = 8;
+        let forge = TempForge::new("trash-race");
+        let note = "notes/doomed.md";
+        forge.write(note, "perishable needle");
+        forge.write("notes/bystander.md", "perishable bystander");
+        reconcile(forge.path()).unwrap();
+        fs::create_dir_all(forge.path().join(".trash")).unwrap();
+        let root = forge.path().to_path_buf();
+        let live = root.join(note);
+        let trashed = root.join(".trash/doomed.md");
+        let done = AtomicBool::new(false);
+
+        let late = std::thread::scope(|scope| {
+            let searcher = scope.spawn(|| {
+                while !done.load(Ordering::SeqCst) {
+                    let _ = query(&root, &root, "perishable", 10);
+                }
+            });
+            let observer = scope.spawn(|| {
+                let mut seen = std::collections::VecDeque::new();
+                loop {
+                    let stopping = done.load(Ordering::SeqCst);
+                    seen.push_back(if live.is_file() {
+                        Job::Changed(root.clone(), note.into())
+                    } else {
+                        Job::Removed(root.clone(), note.into())
+                    });
+                    if stopping {
+                        return seen;
+                    }
+                    if seen.len() > LAG {
+                        apply(seen.pop_front().unwrap());
+                    }
+                }
+            });
+            for _ in 0..CYCLES {
+                fs::rename(&live, &trashed).unwrap();
+                note_removed_in(note, root.clone());
+                fs::rename(&trashed, &live).unwrap();
+                note_changed_in(note, root.clone());
+            }
+            // One more trip, holding the note in the trash until the others
+            // stop, so the observer's last sighting is of it gone.
+            fs::rename(&live, &trashed).unwrap();
+            note_removed_in(note, root.clone());
+            done.store(true, Ordering::SeqCst);
+            searcher.join().unwrap();
+            let late = observer.join().unwrap();
+            fs::rename(&trashed, &live).unwrap();
+            note_changed_in(note, root.clone());
+            late
+        });
+
+        drain_worker(&forge);
+        // What the second writer saw lands after everything else, the last
+        // of it a removal from while the note was in the trash.
+        for job in late {
+            apply(job);
+        }
+        assert!(live.is_file());
+        assert_eq!(rows(&forge), notes_on_disk(&forge));
+        assert!(rows(&forge).contains(&note.to_string()));
     }
 
     #[test]
