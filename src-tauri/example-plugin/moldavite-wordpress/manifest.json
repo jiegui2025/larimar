@@ -5,7 +5,7 @@
   "author": "Moldavite",
   "description": "Publish the active note as a WordPress draft, with safe updates on re-publish. WordPress.com Simple sites require OAuth and are not supported.",
   "apiVersion": 2,
-  "minAppVersion": "1.6.0",
+  "minAppVersion": "0.1.0",
   "permissions": [
     "editor",
     "ui",

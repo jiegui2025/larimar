@@ -5,7 +5,7 @@
   "author": "Moldavite",
   "description": "Insert a timestamp and show the current note's word count.",
   "apiVersion": 1,
-  "minAppVersion": "1.5.0",
+  "minAppVersion": "0.1.0",
   "permissions": ["commands", "editor", "ui"],
   "commands": [
     { "id": "insert-timestamp", "label": "Insert timestamp" },

@@ -389,9 +389,9 @@ jobs:
           set -euo pipefail
           root=src-tauri/target/release/bundle
           version=$(node -p "require('./package.json').version")
-          appimage="$root/appimage/Moldavite_${version}_amd64.AppImage"
-          deb="$root/deb/Moldavite_${version}_amd64.deb"
-          rpm="$root/rpm/Moldavite-${version}-1.x86_64.rpm"
+          appimage="$root/appimage/Larimar_${version}_amd64.AppImage"
+          deb="$root/deb/Larimar_${version}_amd64.deb"
+          rpm="$root/rpm/Larimar-${version}-1.x86_64.rpm"
           ls -la "$root/appimage" "$root/deb" "$root/rpm" || true
           [ -f "$appimage" ] || { echo "::error::Expected $appimage"; exit 1; }
           [ -f "$deb" ] || { echo "::error::Expected $deb"; exit 1; }
@@ -412,7 +412,7 @@ jobs:
         run: |
           set -euo pipefail
           version=$(node -p "require('./package.json').version")
-          deb="src-tauri/target/release/bundle/deb/Moldavite_${version}_amd64.deb"
+          deb="src-tauri/target/release/bundle/deb/Larimar_${version}_amd64.deb"
           listing=$(dpkg-deb -c "$deb")
           printf '%s\n' "$listing"
           mapfile -t entries < <(printf '%s\n' "$listing" | sed -n 's|^.* \(\./\)\{0,1\}\(usr/share/applications/[^/]*\.desktop\)$|\2|p')
@@ -431,8 +431,8 @@ jobs:
         with:
           name: linux-bundles
           path: |
-            src-tauri/target/release/bundle/appimage/Moldavite_*_amd64.AppImage
-            src-tauri/target/release/bundle/rpm/Moldavite-*.x86_64.rpm
+            src-tauri/target/release/bundle/appimage/Larimar_*_amd64.AppImage
+            src-tauri/target/release/bundle/rpm/Larimar-*.x86_64.rpm
           if-no-files-found: error
           retention-days: 3
 
@@ -465,11 +465,11 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False \
             xorg-x11-server-Xvfb ImageMagick mesa-dri-drivers mesa-libEGL mesa-libGL \
             dbus-daemon dbus-tools xdg-utils desktop-file-utils procps-ng
-          rpm=$(find bundles -name 'Moldavite-*.x86_64.rpm' | head -n 1)
+          rpm=$(find bundles -name 'Larimar-*.x86_64.rpm' | head -n 1)
           dnf install -y "$rpm"
           # Extraction stands in for FUSE, which the container lacks. AppRun is
           # what the AppImage runtime executes after mounting the same tree.
-          appimage=$(find bundles -name 'Moldavite_*_amd64.AppImage' | head -n 1)
+          appimage=$(find bundles -name 'Larimar_*_amd64.AppImage' | head -n 1)
           chmod +x "$appimage"
           (cd bundles && "$GITHUB_WORKSPACE/$appimage" --appimage-extract >/dev/null)
 
@@ -513,7 +513,7 @@ jobs:
           }
           status=0
           smoke appimage "$GITHUB_WORKSPACE/bundles/squashfs-root/AppRun" || status=1
-          smoke rpm /usr/bin/moldavite || status=1
+          smoke rpm /usr/bin/larimar || status=1
           exit $status
 
       - name: Keep the screenshots and logs
