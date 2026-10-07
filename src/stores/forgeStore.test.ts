@@ -121,11 +121,11 @@ describe('per-Forge localStorage on rename and delete', () => {
   ];
 
   it('moves every namespaced key of a renamed Forge to its new name', async () => {
-    localStorage.setItem('moldavite-plugins:Old', '{"grants":1}');
-    localStorage.setItem('moldavite-pinned-tabs:Old', '["a"]');
+    localStorage.setItem('larimar-plugins:Old', '{"grants":1}');
+    localStorage.setItem('larimar-pinned-tabs:Old', '["a"]');
     localStorage.setItem('template-storage:Old', '{"t":1}');
-    localStorage.setItem('moldavite-plugins:Other', '{"grants":2}');
-    localStorage.setItem('moldavite-quick-switcher:New', '{"stale":true}');
+    localStorage.setItem('larimar-plugins:Other', '{"grants":2}');
+    localStorage.setItem('larimar-quick-switcher:New', '{"stale":true}');
     invoke.mockImplementation((command: string) =>
       Promise.resolve(
         command === 'rename_forge'
@@ -138,21 +138,21 @@ describe('per-Forge localStorage on rename and delete', () => {
 
     await useForgeStore.getState().renameForge('Old', 'New');
 
-    expect(localStorage.getItem('moldavite-plugins:New')).toBe('{"grants":1}');
-    expect(localStorage.getItem('moldavite-pinned-tabs:New')).toBe('["a"]');
+    expect(localStorage.getItem('larimar-plugins:New')).toBe('{"grants":1}');
+    expect(localStorage.getItem('larimar-pinned-tabs:New')).toBe('["a"]');
     expect(localStorage.getItem('template-storage:New')).toBe('{"t":1}');
-    expect(localStorage.getItem('moldavite-quick-switcher:New')).toBeNull();
-    expect(localStorage.getItem('moldavite-plugins:Old')).toBeNull();
-    expect(localStorage.getItem('moldavite-pinned-tabs:Old')).toBeNull();
-    expect(localStorage.getItem('moldavite-plugins:Other')).toBe('{"grants":2}');
+    expect(localStorage.getItem('larimar-quick-switcher:New')).toBeNull();
+    expect(localStorage.getItem('larimar-plugins:Old')).toBeNull();
+    expect(localStorage.getItem('larimar-pinned-tabs:Old')).toBeNull();
+    expect(localStorage.getItem('larimar-plugins:Other')).toBe('{"grants":2}');
   });
 
   it('leaves storage alone when the backend rename fails', async () => {
-    localStorage.setItem('moldavite-plugins:Old', '{"grants":1}');
+    localStorage.setItem('larimar-plugins:Old', '{"grants":1}');
     invoke.mockRejectedValue(new Error('exists'));
     await expect(useForgeStore.getState().renameForge('Old', 'New')).rejects.toThrow('exists');
-    expect(localStorage.getItem('moldavite-plugins:Old')).toBe('{"grants":1}');
-    expect(localStorage.getItem('moldavite-plugins:New')).toBeNull();
+    expect(localStorage.getItem('larimar-plugins:Old')).toBe('{"grants":1}');
+    expect(localStorage.getItem('larimar-plugins:New')).toBeNull();
   });
 
   it('renames the active Forge through the Forge transition and reloads under the new name', async () => {
@@ -165,7 +165,7 @@ describe('per-Forge localStorage on rename and delete', () => {
     vi.stubGlobal('window', { location: { reload } });
     rememberActiveForge('Old');
     useForgeStore.setState({ active: 'Old' });
-    localStorage.setItem('moldavite-plugins:Old', '{"grants":1}');
+    localStorage.setItem('larimar-plugins:Old', '{"grants":1}');
     invoke.mockImplementation((command: string) => {
       order.push(command);
       return Promise.resolve(
@@ -182,8 +182,8 @@ describe('per-Forge localStorage on rename and delete', () => {
       expect(order).toContain('rename_forge');
       expect(reload).toHaveBeenCalledTimes(1);
       expect(getActiveForgeName()).toBe('New');
-      expect(localStorage.getItem('moldavite-plugins:New')).toBe('{"grants":1}');
-      expect(localStorage.getItem('moldavite-plugins:Old')).toBeNull();
+      expect(localStorage.getItem('larimar-plugins:New')).toBe('{"grants":1}');
+      expect(localStorage.getItem('larimar-plugins:Old')).toBeNull();
     } finally {
       vi.unstubAllGlobals();
       releaseFlush();
@@ -192,19 +192,19 @@ describe('per-Forge localStorage on rename and delete', () => {
   });
 
   it('removes every namespaced key of a deleted Forge so a same-named Forge starts clean', async () => {
-    localStorage.setItem('moldavite-plugins:Gone', '{"grants":1}');
-    localStorage.setItem('moldavite-folders:Gone', '{"f":1}');
-    localStorage.setItem('moldavite-plugins:Other', '{"grants":2}');
-    localStorage.setItem('moldavite-settings', '{"s":1}');
+    localStorage.setItem('larimar-plugins:Gone', '{"grants":1}');
+    localStorage.setItem('larimar-folders:Gone', '{"f":1}');
+    localStorage.setItem('larimar-plugins:Other', '{"grants":2}');
+    localStorage.setItem('larimar-settings', '{"s":1}');
     invoke.mockImplementation((command: string) =>
       Promise.resolve(command === 'list_forges' ? forgesAfter('Default', 'Other') : '/f')
     );
 
     await useForgeStore.getState().deleteForge('Gone');
 
-    expect(localStorage.getItem('moldavite-plugins:Gone')).toBeNull();
-    expect(localStorage.getItem('moldavite-folders:Gone')).toBeNull();
-    expect(localStorage.getItem('moldavite-plugins:Other')).toBe('{"grants":2}');
-    expect(localStorage.getItem('moldavite-settings')).toBe('{"s":1}');
+    expect(localStorage.getItem('larimar-plugins:Gone')).toBeNull();
+    expect(localStorage.getItem('larimar-folders:Gone')).toBeNull();
+    expect(localStorage.getItem('larimar-plugins:Other')).toBe('{"grants":2}');
+    expect(localStorage.getItem('larimar-settings')).toBe('{"s":1}');
   });
 });

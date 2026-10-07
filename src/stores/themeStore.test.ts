@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-const STORAGE_KEY = 'moldavite-theme';
+const STORAGE_KEY = 'larimar-theme';
 
 /**
  * The persist middleware hydrates storage at store-creation time. To exercise

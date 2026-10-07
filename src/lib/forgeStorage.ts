@@ -12,7 +12,7 @@
 
 import type { StateStorage } from 'zustand/middleware';
 
-const ACTIVE_FORGE_CACHE_KEY = '__moldavite_active_forge';
+const ACTIVE_FORGE_CACHE_KEY = '__larimar_active_forge';
 
 /**
  * Must match `DEFAULT_FORGE_NAME` in `src-tauri/src/paths.rs`. Everything

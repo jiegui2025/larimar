@@ -9,7 +9,7 @@ describe('PluginAboutDialog', () => {
     render(
       <PluginAboutDialog
         manifest={{
-          id: 'moldavite-wordpress',
+          id: 'larimar-wordpress',
           name: 'Publish to WordPress',
           version: '1.0.0',
           author: 'Moldavite',

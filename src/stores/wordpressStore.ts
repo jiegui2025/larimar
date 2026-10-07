@@ -231,7 +231,7 @@ export const useWordPressStore = create<WordPressState>()(
       },
     }),
     {
-      name: 'moldavite-wordpress',
+      name: 'larimar-wordpress',
       version: 0, // Hook for future migrations; no shape changes yet.
       // Connection state is read from the Keychain on launch, never persisted
       // here. Only the two choices that are genuinely the user's are kept.

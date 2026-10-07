@@ -20,17 +20,17 @@ import { DangerZone } from './sections/DangerZone';
 // cache is populated after this module is imported, so a captured key would
 // name whichever Forge was active before the last switch.
 const settingsLsKeys = (): string[] => [
-  'moldavite-calendar',
-  'moldavite-settings',
-  'moldavite-theme',
-  namespacedKey('moldavite-folders'),
-  namespacedKey('moldavite-recent-notes'),
+  'larimar-calendar',
+  'larimar-settings',
+  'larimar-theme',
+  namespacedKey('larimar-folders'),
+  namespacedKey('larimar-recent-notes'),
 ];
 
 const SETTINGS_EXPORT_VERSION = 1;
 
 interface SettingsExportPayload {
-  app: 'moldavite';
+  app: 'larimar';
   kind: 'settings';
   version: number;
   exportedAt: string;
@@ -40,7 +40,7 @@ interface SettingsExportPayload {
 /**
  * Data tab: plain ZIP export and import, encrypted backup export and import,
  * JSON settings export and import (frontend-only: serialises the
- * `moldavite-*` localStorage keys without touching the backend), then the
+ * `larimar-*` localStorage keys without touching the backend), then the
  * Obsidian importer and the Delete all notes danger zone folded below.
  */
 export function SettingsData() {
@@ -142,7 +142,7 @@ export function SettingsData() {
     try {
       const selected = await open({
         title: 'Import Encrypted Backup',
-        filters: [{ name: 'Moldavite Backup', extensions: ['moldavite-backup'] }],
+        filters: [{ name: 'Larimar Backup', extensions: ['larimar-backup'] }],
       });
       if (selected && typeof selected === 'string') {
         setPendingBackupPath(selected);
@@ -196,7 +196,7 @@ export function SettingsData() {
         if (value !== null) entries[key] = value;
       }
       const payload: SettingsExportPayload = {
-        app: 'moldavite',
+        app: 'larimar',
         kind: 'settings',
         version: SETTINGS_EXPORT_VERSION,
         exportedAt: new Date().toISOString(),
@@ -232,12 +232,12 @@ export function SettingsData() {
       const payload = parsed as Partial<SettingsExportPayload>;
       if (
         !payload ||
-        payload.app !== 'moldavite' ||
+        payload.app !== 'larimar' ||
         payload.kind !== 'settings' ||
         typeof payload.entries !== 'object' ||
         payload.entries === null
       ) {
-        toast.error('Not a valid Moldavite settings file');
+        toast.error('Not a valid Larimar settings file');
         return;
       }
       let applied = 0;

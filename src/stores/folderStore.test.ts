@@ -16,16 +16,16 @@ describe('folderStore per-Forge isolation', () => {
     localStorage.clear();
   });
 
-  it('picks up a pre-existing flat "moldavite-folders" value once, under the active Forge', async () => {
+  it('picks up a pre-existing flat "larimar-folders" value once, under the active Forge', async () => {
     localStorage.setItem(
-      'moldavite-folders',
+      'larimar-folders',
       JSON.stringify({ state: { expandedFolders: ['Projects'] } })
     );
 
     await useFolderStore.persist.rehydrate();
 
     expect(useFolderStore.getState().expandedFolders).toEqual(['Projects']);
-    expect(localStorage.getItem('moldavite-folders:Default')).toContain('Projects');
+    expect(localStorage.getItem('larimar-folders:Default')).toContain('Projects');
   });
 
   it('writes expanded folders under the Forge that is active at write time', () => {
@@ -34,15 +34,15 @@ describe('folderStore per-Forge isolation', () => {
     rememberActiveForge('Beta');
     useFolderStore.getState().expandFolder('Beta Folder');
 
-    const alpha = JSON.parse(localStorage.getItem('moldavite-folders:Alpha') ?? '{}');
-    const beta = JSON.parse(localStorage.getItem('moldavite-folders:Beta') ?? '{}');
+    const alpha = JSON.parse(localStorage.getItem('larimar-folders:Alpha') ?? '{}');
+    const beta = JSON.parse(localStorage.getItem('larimar-folders:Beta') ?? '{}');
     expect(alpha.state.expandedFolders).toEqual(['Alpha Folder']);
     expect(beta.state.expandedFolders).toEqual(['Beta Folder']);
   });
 
   it("re-reads the correct Forge's folders once the active Forge is known", async () => {
     localStorage.setItem(
-      'moldavite-folders:Beta',
+      'larimar-folders:Beta',
       JSON.stringify({ state: { expandedFolders: ['Beta Folder'] } })
     );
     // Stand in for the stale slice hydration loaded under the previous Forge.

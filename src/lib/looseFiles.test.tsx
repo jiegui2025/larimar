@@ -185,7 +185,7 @@ describe('opening a loose file', () => {
     });
     expect(isCurrentNoteViewOnly(state)).toBe(false);
     expect(state.recentNoteIds).toEqual([]);
-    expect(localStorage.getItem(namespacedKey('moldavite-recent-notes')) ?? '').not.toContain(
+    expect(localStorage.getItem(namespacedKey('larimar-recent-notes')) ?? '').not.toContain(
       'loose:'
     );
   });

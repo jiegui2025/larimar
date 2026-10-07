@@ -64,7 +64,7 @@ describe('mobile data export', () => {
     expect(command).toBe('export_mobile_document');
     expect(request.kind).toBe('settings');
     expect(JSON.parse(request.json)).toMatchObject({
-      app: 'moldavite',
+      app: 'larimar',
       kind: 'settings',
       version: 1,
     });

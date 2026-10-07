@@ -30,10 +30,10 @@ Larimar renames every upstream identifier, including on-disk format strings, nev
 ```mermaid
 flowchart LR
   accTitle: What crosses from upstream to Larimar
-  accDescr: Upstream's config, keyring, locked notes and encrypted backups are never read by Larimar, plain Markdown notes can be copied over as files by the user.
+  accDescr: Upstream's config and keyring are never read by Larimar and its v2/v3 locked notes and encrypted backups cannot be opened, plain Markdown notes can be copied over as files by the user.
   subgraph UP["Upstream app's data"]
     CFG["config, data dirs, keyring"]
-    LOCK["locked notes, encrypted backups"]
+    LOCK["v2/v3 locked notes, encrypted backups"]
     PLAIN["plain Markdown notes"]
   end
   CFG -.-x|"never read"| LAR["Larimar"]
@@ -56,7 +56,7 @@ flowchart LR
 
 | ✅ | ⚠️ |
 |---|---|
-| Larimar runs next to an installed upstream app without sharing config, data, keyring, deep links, MCP name or clipper host | upstream users cannot bring locked notes or encrypted backups; they must unlock and export plain Markdown in upstream first |
+| Larimar runs next to an installed upstream app without sharing config, data, keyring, deep links, MCP name or clipper host | upstream users cannot bring notes locked in the v2 or v3 format or encrypted backups; they must unlock and export plain Markdown in upstream first. Notes locked in the old unversioned format carry no AAD and still open until [#11] drops the legacy readers |
 | No doubt about which app is which; CI keeps it that way | every upstream fix ported by hand must be renamed too ([ADR 0001](0001-hard-fork.md)) |
 | The pre-V2 and V2 note-lock readers, kept only for upstream-era data, can be dropped when encryption moves into `larimar-crypto` ([#4], [#11]) | old commit messages and the archive still carry the name: the gate checks the tree, not history |
 | No migration code: Larimar has no users or data yet | restoring the archived iOS app later means renaming it first |

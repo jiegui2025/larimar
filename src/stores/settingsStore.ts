@@ -337,7 +337,7 @@ export const useSettingsStore = create<SettingsState>()(
       resetToDefaults: () => set(defaultSettings),
     }),
     {
-      name: 'moldavite-settings',
+      name: 'larimar-settings',
       version: 2,
       migrate: migrateSettingsState,
       // Legacy payloads without a version can skip Zustand's migrate hook.

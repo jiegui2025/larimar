@@ -31,7 +31,7 @@ export const useWhatsNewStore = create<WhatsNewState>()(
       markSeen: (version) => set({ lastSeenVersion: version }),
     }),
     {
-      name: 'moldavite-whats-new',
+      name: 'larimar-whats-new',
       version: 0, // Hook for future migrations; no shape changes yet.
       // Persist only the durable cursor, not transient modal state.
       partialize: (state) => ({ lastSeenVersion: state.lastSeenVersion }),

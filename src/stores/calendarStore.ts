@@ -514,7 +514,7 @@ export const useCalendarStore = create<CalendarState>()(
       },
     }),
     {
-      name: 'moldavite-calendar',
+      name: 'larimar-calendar',
       version: 2,
       migrate: (persisted, version) =>
         migrateCalendarState(persisted, version) as unknown as CalendarState,

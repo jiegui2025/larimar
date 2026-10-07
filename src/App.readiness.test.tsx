@@ -72,7 +72,7 @@ beforeEach(() => {
   invokeMock.mockReset();
   initializeNotesMock.mockClear();
   localStorage.clear();
-  localStorage.setItem('__moldavite_active_forge', 'icloud://larimar');
+  localStorage.setItem('__larimar_active_forge', 'icloud://larimar');
 });
 
 describe('launching on the synced Forge', () => {
@@ -121,7 +121,7 @@ describe('launching on the synced Forge', () => {
   });
 
   it('renders a local Forge at once', async () => {
-    localStorage.setItem('__moldavite_active_forge', 'Default');
+    localStorage.setItem('__larimar_active_forge', 'Default');
     invokeMock.mockImplementation(async (command: string) =>
       command === 'icloud_readiness' ? { state: 'local', message: null } : {}
     );

@@ -13,7 +13,7 @@ import {
 } from '@/lib/forgeStorage';
 import type { FolderInfo } from '@/types';
 
-const FOLDER_STORAGE_KEY = 'moldavite-folders';
+const FOLDER_STORAGE_KEY = 'larimar-folders';
 
 const defaultSectionsCollapsed = {
   notes: false,

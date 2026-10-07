@@ -215,12 +215,12 @@ describe('noteStore - the old tab pins', () => {
     useNoteStore.setState({ openTabs: [], activeTabId: null, currentNote: null });
   });
 
-  // `moldavite-pinned-tabs` held "keep this tab" pins that were never restored
+  // `larimar-pinned-tabs` held "keep this tab" pins that were never restored
   // at launch. They are not merged into the top-bar pins; nothing reads or
   // writes the key any more.
   it('neither reads nor writes the old per-Forge tab pin key', () => {
     rememberActiveForge('Alpha');
-    localStorage.setItem('moldavite-pinned-tabs:Alpha', JSON.stringify(['notes/shared.md']));
+    localStorage.setItem('larimar-pinned-tabs:Alpha', JSON.stringify(['notes/shared.md']));
     const { openTab, closeTab } = useNoteStore.getState();
 
     openTab(makeNote('notes/shared.md'), true);
@@ -229,7 +229,7 @@ describe('noteStore - the old tab pins', () => {
     closeTab('notes/other.md');
 
     expect(useQuickSwitcherStore.getState().pinnedNoteIds).toEqual(['notes/other.md']);
-    expect(localStorage.getItem('moldavite-pinned-tabs:Alpha')).toBe('["notes/shared.md"]');
+    expect(localStorage.getItem('larimar-pinned-tabs:Alpha')).toBe('["notes/shared.md"]');
     expect(useNoteStore.getState().openTabs.map((tab) => tab.id)).toEqual(['notes/shared.md']);
   });
 });

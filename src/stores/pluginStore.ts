@@ -9,7 +9,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { forgeNamespacedStorage, onActiveForgeChange, readNamespaced } from '@/lib/forgeStorage';
 
-const PLUGIN_GRANTS_KEY = 'moldavite-plugins';
+const PLUGIN_GRANTS_KEY = 'larimar-plugins';
 
 export interface PluginGrant {
   enabled: boolean;

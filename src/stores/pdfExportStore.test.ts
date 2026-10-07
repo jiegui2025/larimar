@@ -19,7 +19,7 @@ describe('pdfExportStore persist version', () => {
 
   it('rehydrates a stored value with no version field unchanged', async () => {
     localStorage.setItem(
-      'moldavite-pdf-export',
+      'larimar-pdf-export',
       JSON.stringify({ state: { pageSize: 'a4', margin: 'wide' } })
     );
 

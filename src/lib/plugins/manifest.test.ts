@@ -7,7 +7,7 @@ import {
   pluginPermissionLabel,
   PLUGIN_PERMISSION_LABELS,
 } from './permissionLabels';
-import wordpressManifest from '../../../src-tauri/example-plugin/moldavite-wordpress/manifest.json';
+import wordpressManifest from '../../../src-tauri/example-plugin/larimar-wordpress/manifest.json';
 
 const base = { id: 'demo', name: 'Demo', version: '1.0.0', apiVersion: 1 };
 
@@ -160,7 +160,7 @@ describe('validateManifest', () => {
     ).toBe(true);
   });
   it('validates the bundled Publish to WordPress manifest', () => {
-    expect(validateManifest(wordpressManifest, 'moldavite-wordpress')).toMatchObject({
+    expect(validateManifest(wordpressManifest, 'larimar-wordpress')).toMatchObject({
       ok: true,
       manifest: {
         apiVersion: 2,

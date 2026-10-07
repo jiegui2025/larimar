@@ -214,7 +214,7 @@ export const useThemeStore = create<ThemeState>()(
       setTheme: (mode) => set({ baseMode: mode, theme: mode }),
     }),
     {
-      name: 'moldavite-theme',
+      name: 'larimar-theme',
       version: 2,
       // v0/v1 stored only `theme: 'light'|'dark'|'system'` and had no
       // `version` key. zustand only invokes `migrate` when the persisted

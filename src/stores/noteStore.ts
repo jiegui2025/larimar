@@ -90,7 +90,7 @@ interface NoteState {
 
 const loadRecentNotes = (): string[] => {
   try {
-    const stored = localStorage.getItem(namespacedKey('moldavite-recent-notes'));
+    const stored = localStorage.getItem(namespacedKey('larimar-recent-notes'));
     if (stored) {
       return JSON.parse(stored);
     }
@@ -504,10 +504,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
         : null;
 
       try {
-        localStorage.setItem(
-          namespacedKey('moldavite-recent-notes'),
-          JSON.stringify(recentNoteIds)
-        );
+        localStorage.setItem(namespacedKey('larimar-recent-notes'), JSON.stringify(recentNoteIds));
       } catch (error) {
         console.error('[noteStore] Failed to persist renamed note references:', error);
       }
@@ -563,10 +560,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       const externallyChanged = new Map(state.externallyChanged);
       externallyChanged.delete(noteId);
       try {
-        localStorage.setItem(
-          namespacedKey('moldavite-recent-notes'),
-          JSON.stringify(recentNoteIds)
-        );
+        localStorage.setItem(namespacedKey('larimar-recent-notes'), JSON.stringify(recentNoteIds));
       } catch (error) {
         console.error('[noteStore] Failed to forget note references:', error);
       }
@@ -687,7 +681,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
       const updated = [noteId, ...filtered].slice(0, 7);
 
       try {
-        localStorage.setItem(namespacedKey('moldavite-recent-notes'), JSON.stringify(updated));
+        localStorage.setItem(namespacedKey('larimar-recent-notes'), JSON.stringify(updated));
       } catch (error) {
         console.error('[noteStore] Failed to save recent notes:', error);
       }

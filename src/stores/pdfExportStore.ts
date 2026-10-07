@@ -49,7 +49,7 @@ export const usePdfExportStore = create<PdfExportState>()(
       setMargin: (margin) => set({ margin }),
     }),
     {
-      name: 'moldavite-pdf-export',
+      name: 'larimar-pdf-export',
       version: 0, // Hook for future migrations; no shape changes yet.
     }
   )

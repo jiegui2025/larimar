@@ -80,7 +80,7 @@ describe('updateStore', () => {
       error: 'transient',
     });
 
-    const persisted = JSON.parse(localStorage.getItem('moldavite-updates') || '{}');
+    const persisted = JSON.parse(localStorage.getItem('larimar-updates') || '{}');
     expect(persisted.state).toEqual({
       availableVersion: '1.8.0',
       lastCheckedAt: 1234,
@@ -214,7 +214,7 @@ describe('updateStore', () => {
   it('keeps the no-release state across a relaunch', () => {
     useUpdateStore.setState({ noReleaseYet: true, lastCheckedAt: 1234 });
 
-    const persisted = JSON.parse(localStorage.getItem('moldavite-updates') || '{}');
+    const persisted = JSON.parse(localStorage.getItem('larimar-updates') || '{}');
     expect(persisted.state.noReleaseYet).toBe(true);
   });
 

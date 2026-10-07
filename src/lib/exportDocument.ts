@@ -19,14 +19,14 @@ export async function exportDocument(request: DocumentExport): Promise<boolean> 
     backup: {
       title: 'Export Encrypted Backup',
       stem: 'backup',
-      extension: 'moldavite-backup',
-      label: 'Moldavite Backup',
+      extension: 'larimar-backup',
+      label: 'Larimar Backup',
     },
     settings: { title: 'Export Settings', stem: 'settings', extension: 'json', label: 'JSON' },
   }[request.kind];
   const destination = await save({
     title: options.title,
-    defaultPath: `moldavite-${options.stem}-${date}.${options.extension}`,
+    defaultPath: `larimar-${options.stem}-${date}.${options.extension}`,
     filters: [{ name: options.label, extensions: [options.extension] }],
   });
   if (!destination) return false;
