@@ -156,18 +156,75 @@ that is no longer true. Fix it in the same pull request.
 
 ## Pull requests
 
-Keep each pull request focused and explain the user impact, implementation, and
-verification. Include:
+Every change reaches `main` through this flow. The "Protect main" ruleset
+enforces the pull request, the `ci-ok` check, resolved review threads and
+rebase merging; nobody bypasses it.
 
-- A clear problem statement and summary of the approach
-- Linked issues where applicable
-- Tests for new or corrected behavior
-- Documentation updates required by the maintenance rules above
-- Screenshots or a short recording for visible UI changes
-- Any security, migration, compatibility, or user-data implications
+```mermaid
+flowchart TD
+  accTitle: How a change reaches main
+  accDescr: A branch's commits go into a PR; CI must pass ci-ok and the independent review's findings must be closed before a rebase merge, then the branch is deleted.
+  branch["Branch: wt new larimar type/topic, or git switch -c type/topic"] --> commits["Conventional Commits, each builds and passes tests"]
+  commits --> pr["Open PR from the template"]
+  pr --> ci{"CI: ci-ok"}
+  pr --> review["Independent review: correctness, silent failures, security"]
+  review --> fix["Fix or accept every finding; fixes fold into the commit they fix"]
+  fix --> comment["Post the review and a resolution table on the PR"]
+  ci -->|green| ready{"All findings closed?"}
+  comment --> ready
+  ready -->|yes| merge["Rebase merge: commits land on main as written"]
+  merge --> clean["Branch deleted on GitHub; wt prune or git branch -d locally"]
+```
 
-Do not include unrelated formatting or refactors. Make sure tests, lint, formatting,
-and relevant Rust checks are green before requesting review.
+| Rule | Why |
+|---|---|
+| **Rebase merges only** | History keeps each logical change; `git bisect` works per commit |
+| **Every commit** follows [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): summary` | Each lands on `main` as written |
+| **Every commit builds and passes tests** | Bisectability; fold fixes into the commit they fix |
+| **Independent review before merge**, every finding fixed or accepted with a reason, the review posted on the PR | A second pair of eyes without the author's context; the record stays with the change |
+| **One feature or fix per PR**, no unrelated formatting or refactors | Reviewable size |
+| **The PR body follows the [template](.github/pull_request_template.md)** | Acceptance evidence and proof that tests fail without the change in one place |
+| **The sidebar matches the issue** (below) | Merging closes the right issue and keeps the board true |
+| **No rebase just because `main` moved** | The ruleset doesn't require an up-to-date branch; rebase for a conflict |
+| **Upstream changes arrive as ported commits** | While Phase 0 still takes upstream fixes ([ADR 0001](docs/adr/0001-hard-fork.md)), each one is cherry-picked and reworded into a Conventional Commit naming the upstream commit, with upstream's closing keywords removed: a merge commit can't land under linear history, and upstream's `Fixes #N` lines would close Larimar issues |
+
+Include tests for new or corrected behaviour, the documentation the
+maintenance rules above require, screenshots or a recording for visible UI
+changes, and any security, migration, compatibility or user-data implications.
+
+### Commits
+
+| Part | Rule |
+|---|---|
+| Subject | `type(scope): summary` (scope optional), at most 72 characters, lower case after the colon, imperative ("add", not "added"), no full stop |
+| Types | `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, `style`, `revert`; `fix` is a bug users see (a CI bug is `ci`, a test-only change `test`) |
+| Scope | the area, for example `core`, `markdown`, `mcp`, `ingest`, `sync`, `server`, `editor`, `search`, `updater`, `clipper`, `app`, `ios`, `packaging`, `adr`, `architecture`, `contributing`, `readme`, `release` |
+| Body | why (what was wrong, with evidence), what (as behaviour), proof (the test, and that it fails without the change); wrapped at 72; required for `feat`, `fix`, `refactor`, `perf` |
+| Footers | `Refs #N` or `Fixes #N`, one issue per line; `Co-Authored-By:` |
+
+### Sidebar and linked issues
+
+| Field | Value |
+|---|---|
+| Development | the issue, through `Fixes #N` on its own line at the end of the body; check with `gh pr view N --json closingIssuesReferences` |
+| Labels | the issue's `type:`, `area:` and `priority:` labels, plus `type: devops` for `.github/` or CI |
+| Milestone | the issue's |
+| Assignee | the owner, for PRs Claude sessions open |
+| Reviewers | `.github/CODEOWNERS` requests the owner on PRs they didn't open; PRs opened as the owner are gated by the independent review |
+| Projects | [board 7](https://github.com/users/jiegui2025/projects/7), *In review* |
+
+| Pitfall | Avoid it |
+|---|---|
+| An issue needs several PRs | split it into sub-issues, one per PR: each PR says `Fixes #<sub-issue>` and `Refs #<parent>`; close the parent by hand when its last part closes |
+| A closing keyword in prose | GitHub closes an issue for *fix*, *close* or *resolve* (any form) followed by `#N` anywhere in a PR body or commit message, tables included. Write `Refs #N` or reword |
+
+### Review comments
+
+The independent review is one PR comment per round: the findings
+(`| # | Finding | Severity | Resolution |`), then what was verified. Severities:
+**blocking** (the PR goes back to draft), important, minor. Every row is fixed
+or explicitly accepted with the reason, and every review thread is resolved
+before merging.
 
 ### Large files
 
