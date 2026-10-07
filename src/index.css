@@ -3027,9 +3027,9 @@ html.icon-rail-right {
    below also strips the underline until hover, an embedded link was invisible
    until you happened to point at it.
 
-   Note content is where colour is allowed to carry meaning (see
-   DESIGN_CREAM.md); the chrome rule about rationing the accent governs the app
-   around the note, not the writing inside it. */
+   Note content is where colour is allowed to carry meaning; the chrome rule
+   about rationing the accent governs the app around the note, not the writing
+   inside it. */
 .tiptap a,
 wiki-link {
   color: var(--syntax-link);

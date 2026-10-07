@@ -60,9 +60,7 @@ Clippy with warnings denied.
 ## Where things live
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) shows how the entrypoints, the
-MCP path and the plugin sandbox fit together. The current feature status,
-storage model, and known debt are documented in
-[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md). Keep both accurate when
+MCP path and the plugin sandbox fit together. Keep it accurate when
 architecture or commands change.
 
 - `src/components/` contains React UI grouped by feature.
@@ -139,14 +137,11 @@ when a contract exists in both Rust and TypeScript.
 Follow the documentation-maintenance rules:
 
 - User-visible changes need an entry under the upcoming version in `CHANGELOG.md`.
-- Feature changes need corresponding updates in `README.md` and
-  `docs/PROJECT_STATUS.md`.
-- Plugin API or permission changes must update both `docs/PLUGINS.md` and
-  `docs/plugins.html`, and the community directory's `docs/api.md` and
-  `scripts/lib/rules.mjs` in
-  [moldavite-plugins](https://github.com/mauropereiira/moldavite-plugins) in the
-  same release.
-- Website claims must stay aligned with shipped behavior.
+- Feature changes need corresponding updates in `README.md`.
+- Plugin API or permission changes must update `docs/PLUGINS.md`, and the
+  community directory's `docs/api.md` and `scripts/lib/rules.mjs` in
+  [moldavite-plugins](https://github.com/mauropereiira/moldavite-plugins), in
+  the same release.
 
 Before opening a pull request, ask whether any documentation now describes behavior
 that is no longer true. Fix it in the same pull request.

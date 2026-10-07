@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const EXTENSIONS = /\.(rs|ts|tsx|js|mjs|css|swift)$/;
-const SKIP = /^(node_modules|dist|src-tauri\/target|src-tauri\/gen|docs\/fonts)\//;
+const SKIP = /^(node_modules|dist|src-tauri\/target|src-tauri\/gen)\//;
 
 // A rule of repeated punctuation used as a section divider.
 const BANNER = /^\s*(?:\/\/+|\/\*+|\*|#)\s*[=*_~-]{5,}/;

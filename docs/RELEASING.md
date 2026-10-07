@@ -157,7 +157,7 @@ early fails the publish gate and blocks the whole release.
 
 CI builds and attaches both Chrome zips on its own. The Chrome Web Store listing
 is updated separately, and only when `extension/` changed: upload the
-`-store` zip with a higher extension version (see `docs/CHROME_STORE.md`). The
+`-store` zip with a higher extension version than the live one. The
 Firefox build cannot be automated here: release Firefox installs only signed add-ons, and
 signing goes through a Mozilla account.
 
@@ -259,16 +259,15 @@ minor; breaking change → major.
 Mac releases require a Developer ID Application provisioning profile for
 `app.moldavite` with iCloud Documents enabled for `iCloud.app.moldavite`.
 Download it from Apple Developer → Profiles and save it locally as
-`src-tauri/Moldavite.provisionprofile` (ignored by Git). Run
-`python3 scripts/check-mac-icloud-profile.py src-tauri/Moldavite.provisionprofile`
-before a local signed build. CI decodes `APPLE_MAC_ICLOUD_PROFILE` and validates
-it before signing; Tauri embeds it at `Contents/embedded.provisionprofile`.
+`src-tauri/Moldavite.provisionprofile` (ignored by Git). CI decodes
+`APPLE_MAC_ICLOUD_PROFILE` and validates it before signing; Tauri embeds it at
+`Contents/embedded.provisionprofile`.
 Renew the profile before its expiration or after changing its capabilities or
 signing certificate, and update the secret. Never commit signing profiles.
 
 After each macOS build, `build-tauri` verifies the result: `codesign --verify
---deep --strict` on `Moldavite.app`, `check-mac-icloud-profile.py` again on the
-embedded profile, and a comparison of the signed app's entitlements against
+--deep --strict` on `Moldavite.app`, a check of the embedded profile, and a
+comparison of the signed app's entitlements against
 `src-tauri/Moldavite.entitlements`, failing on the first key that does not
 match. An app that signs but loses iCloud never reaches a release asset.
 
