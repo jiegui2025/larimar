@@ -90,7 +90,6 @@ mod stress_test;
 
 // The same Foundation boundary is linked on macOS and iOS.
 #[cfg(target_os = "macos")]
-#[path = "../plugins/tauri-plugin-icloud/src/coordination.rs"]
 mod file_coordination;
 pub(crate) mod note_file_access;
 

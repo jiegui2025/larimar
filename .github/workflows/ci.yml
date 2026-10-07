@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # The Swift package under the iCloud plugin is also linked into the macOS
-  # desktop build (build.rs), so its tests stay while macOS is compiled here.
+  # The iCloud bridge's Swift package is linked into the macOS desktop build
+  # (build.rs), so its tests stay while macOS is compiled here.
   test-icloud:
     name: test-icloud
     runs-on: macos-latest
@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - run: swift test --package-path src-tauri/plugins/tauri-plugin-icloud/ios/Core
+      - run: swift test --package-path src-tauri/src-swift-cloud
 
   # One job per check so each reports as its own status. `matrix.run`
   # is a literal defined below, never event input, so interpolating it is safe.

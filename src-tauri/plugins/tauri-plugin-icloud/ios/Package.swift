@@ -9,7 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "Tauri", path: "../.tauri/tauri-api"),
-        .package(name: "MoldaviteCloud", path: "Core")
+        .package(name: "MoldaviteCloud", path: "../../../src-swift-cloud")
     ],
     targets: [
         .target(name: "tauri-plugin-icloud", dependencies: ["Tauri", "MoldaviteCloud"], path: "Sources")

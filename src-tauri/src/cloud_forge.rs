@@ -12,7 +12,6 @@ use tauri::AppHandle;
 use tauri::{Emitter, Manager};
 
 #[cfg(not(target_os = "ios"))]
-#[path = "../plugins/tauri-plugin-icloud/src/models.rs"]
 mod models;
 #[cfg(any(target_os = "macos", target_os = "ios", test))]
 use models::{ChangeKind, CloudChange};
