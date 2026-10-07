@@ -1,0 +1,5 @@
+# Node 20, as in .nvmrc and CI: on newer Node a couple of hundred vitest tests
+# fail (CONTRIBUTING.md › Development setup). Pinned here so the version does
+# not depend on mise's per-user .nvmrc setting.
+[tools]
+node = "20"
