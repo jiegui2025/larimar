@@ -1,5 +1,12 @@
 # Releasing Moldavite
 
+> [!WARNING]
+> **Not the Larimar process.** This describes the upstream release flow. Its
+> workflows (`release.yml`, `homebrew-tap.yml`) were removed in Larimar's CI
+> switch-over (#6); Larimar's own release workflow and this file's rewrite
+> come with #17. Until then there are no releases, and `v*` tags are blocked
+> by the "Protect release tags" ruleset.
+
 Moldavite ships signed and notarized macOS builds (Apple Silicon and Intel) and
 unsigned Windows and Linux builds (an AppImage, a deb and an rpm) via GitHub Actions. Every platform's updater artifacts,
 including Windows, are signed with `TAURI_SIGNING_PRIVATE_KEY` so the updater can
