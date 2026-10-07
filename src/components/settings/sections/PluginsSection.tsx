@@ -29,12 +29,13 @@ import { listPlugins, reconcilePlugins, setPluginsPaused } from '@/lib/plugins/h
 import { getPluginAppVersion } from '@/lib/plugins/api';
 import type { PluginInfo } from '@/lib/plugins/types';
 import {
-  COMMUNITY_REGISTRY_URL,
-  COMMUNITY_REPORT_URL,
+  COMMUNITY_REGISTRY_REPO,
   communityIncompatibility,
   communityInstallState,
   communityPluginFileUrl,
   communityPluginSourceUrl,
+  communityRegistryUrl,
+  communityReportUrl,
   parseCommunityRegistry,
   type CommunityPlugin,
 } from '@/lib/plugins/registry';
@@ -56,11 +57,11 @@ import {
 import { ConfirmDialog } from '@/components/ui';
 import { Group, Toggle } from '../common';
 
-const PLUGINS_DOC_URL = 'https://github.com/mauropereiira/Moldavite/blob/main/docs/PLUGINS.md';
+const PLUGINS_DOC_URL = 'https://github.com/jiegui2025/larimar/blob/main/docs/PLUGINS.md';
 const RECOVERY_DOC_URL = `${PLUGINS_DOC_URL}#if-a-plugin-stops-moldavite-from-working`;
 
 type SheetState = { info: PluginInfo; mode: 'grant' | 'view' } | null;
-type RegistryStatus = 'idle' | 'loading' | 'ready' | 'error';
+type RegistryStatus = 'idle' | 'loading' | 'ready' | 'error' | 'none';
 type PendingInstall =
   | { kind: 'community'; plugin: CommunityPlugin; installed: InstalledAccess | null }
   | { kind: 'file'; candidate: ImportCandidate; installed: InstalledAccess | null }
@@ -177,6 +178,7 @@ export function PluginsSection() {
   const addToast = useToastStore((s) => s.addToast);
   const installRequest = usePluginInstallStore((s) => s.pending);
   const clearInstallRequest = usePluginInstallStore((s) => s.clear);
+  const registryRepo = COMMUNITY_REGISTRY_REPO;
 
   const refresh = useCallback(async () => {
     const infos = await listPlugins();
@@ -269,13 +271,24 @@ export function PluginsSection() {
   const browseCommunityPlugins = useCallback(
     async (request?: PluginInstallRequest) => {
       if (request) clearInstallRequest(request.nonce);
+      const repo = COMMUNITY_REGISTRY_REPO;
+      if (!repo) {
+        setRegistryStatus('none');
+        if (request) {
+          addToast(
+            'error',
+            `There is no Larimar plugin registry yet to install “${request.id}” from.`
+          );
+        }
+        return;
+      }
       setRegistryStatus('loading');
       setRegistryError(null);
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 15_000);
       try {
         const installedPlugins = await refresh();
-        const response = await fetch(COMMUNITY_REGISTRY_URL, {
+        const response = await fetch(communityRegistryUrl(repo), {
           cache: 'no-store',
           signal: controller.signal,
         });
@@ -332,17 +345,18 @@ export function PluginsSection() {
   }, [browseCommunityPlugins, installRequest]);
 
   const installCommunityPlugin = async (plugin: CommunityPlugin, confirmUpdate: boolean) => {
+    if (!registryRepo) return;
     setBusy(true);
     setInstallingId(plugin.id);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 30_000);
     try {
       const [manifestResponse, pluginResponse] = await Promise.all([
-        fetch(communityPluginFileUrl(plugin, 'manifest.json'), {
+        fetch(communityPluginFileUrl(registryRepo, plugin, 'manifest.json'), {
           cache: 'no-store',
           signal: controller.signal,
         }),
-        fetch(communityPluginFileUrl(plugin, 'plugin.js'), {
+        fetch(communityPluginFileUrl(registryRepo, plugin, 'plugin.js'), {
           cache: 'no-store',
           signal: controller.signal,
         }),
@@ -678,7 +692,23 @@ export function PluginsSection() {
           </div>
         )}
 
-        {registryStatus === 'ready' && (
+        {registryStatus === 'none' && (
+          <div
+            role="status"
+            className="p-4 text-sm"
+            style={{
+              backgroundColor: 'transparent',
+              border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            No Larimar plugin registry yet. Install a plugin from a .zip or a folder, or build your
+            own.
+          </div>
+        )}
+
+        {registryStatus === 'ready' && registryRepo && (
           <section aria-labelledby="community-plugin-heading" className="space-y-3">
             <div>
               <h4
@@ -689,9 +719,9 @@ export function PluginsSection() {
                 Community plugins
               </h4>
               <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                Every listed plugin was reviewed by the Moldavite maintainer. Files come only from
-                Moldavite&apos;s pinned community repository, and both hashes are checked before
-                anything is installed.
+                Files come only from the pinned registry repository, and both hashes are checked
+                before anything is installed. A listing is not a review: only install plugins you
+                trust.
               </p>
             </div>
 
@@ -846,18 +876,16 @@ export function PluginsSection() {
                       <div className="flex gap-3 mt-2">
                         <button
                           type="button"
-                          onClick={() => openExternal(communityPluginSourceUrl(plugin))}
+                          onClick={() =>
+                            openExternal(communityPluginSourceUrl(registryRepo, plugin))
+                          }
                           className="settings-link pad-hover"
                         >
                           View source
                         </button>
                         <button
                           type="button"
-                          onClick={() =>
-                            openExternal(
-                              `${COMMUNITY_REPORT_URL}&title=${encodeURIComponent(`Report: ${plugin.id}`)}`
-                            )
-                          }
+                          onClick={() => openExternal(communityReportUrl(registryRepo, plugin))}
                           className="settings-link pad-hover"
                         >
                           Report a problem
@@ -897,8 +925,8 @@ export function PluginsSection() {
           source={pendingInstall.kind}
           installed={pendingInstall.installed}
           onViewSource={
-            pendingInstall.kind === 'community'
-              ? () => openExternal(communityPluginSourceUrl(pendingInstall.plugin))
+            pendingInstall.kind === 'community' && registryRepo
+              ? () => openExternal(communityPluginSourceUrl(registryRepo, pendingInstall.plugin))
               : undefined
           }
           onInstall={() => void confirmPendingInstall()}

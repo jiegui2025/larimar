@@ -1,11 +1,11 @@
 //! Host-side network execution for the plugin `net.fetch` API.
 //!
-//! The webview CSP's `connect-src` is fixed at build time (self plus a few
-//! GitHub hosts for the registry), so a plugin's request to any other host
-//! never reaches this code if it goes through the page's `fetch()` — WebKit
-//! blocks it before Moldavite's own allowlist logic ever runs. Routing the
-//! request through this command instead means it leaves from the Rust
-//! process, which the CSP does not govern.
+//! The webview CSP's `connect-src` is fixed at build time (`'self'` only), so
+//! a plugin's request to any other host never reaches this code if it goes
+//! through the page's `fetch()` — WebKit blocks it before Moldavite's own
+//! allowlist logic ever runs. Routing the request through this command
+//! instead means it leaves from the Rust process, which the CSP does not
+//! govern.
 //!
 //! `src/lib/plugins/api.ts` (`pluginFetch`) is the primary trust boundary:
 //! plugin workers have no IPC access, so every call here is already validated

@@ -37,24 +37,21 @@ the OS credential store, and show notifications.
 
 ## Installing plugins
 
-Every plugin in the community directory lives in the public
-[moldavite-plugins](https://github.com/mauropereiira/moldavite-plugins) repository and is listed only
-after the Moldavite maintainer reviews and approves it. There are three ways to install one, and all
-of them stop at the same confirmation, which names the plugin, what it can do, and every site it can
-send data to. Installing never turns a plugin on.
+Larimar has no plugin registry yet. **Settings → Plugins → Browse community plugins** says so and
+makes no network request, and a `larimar://plugin/<plugin-id>` install link finds nothing to
+install. Install a plugin you made or downloaded with **Install from .zip… or Install from
+folder…** instead (see [Installing from a file](#installing-from-a-file)). Every install stops at
+the same confirmation, which names the plugin, what it can do, and every site it can send data to.
+Installing never turns a plugin on.
 
-- **Settings → Plugins → Browse community plugins.** Moldavite fetches the directory only when you
-  click it. Each entry links to its source code and to a report form.
-- **The website directory.** The [website directory](https://moldavite.dev/plugins#directory)
-  can be searched by name, description, author, and permission. Each **Install in Moldavite** link has
-  the exact shape `larimar://plugin/<plugin-id>`: it opens **Settings → Plugins**, fetches the
-  directory, highlights the entry, and shows the confirmation. The link never carries file URLs or
-  plugin code, other `larimar://` shapes are ignored, and the id must exist in the fetched
-  registry.
-- **Install from .zip… or Install from folder…** for a plugin you made or downloaded. See
-  [Installing from a file](#installing-from-a-file).
-
-Rust verifies both registry hashes before the atomic install. An update shows which permissions and
+The directory code stays for a registry Larimar may publish later. It is off while
+`COMMUNITY_REGISTRY_REPO` in `src/lib/plugins/registry.ts` is null, and the webview's CSP
+`connect-src` allows only `'self'`, so turning it on also means allowing
+`https://raw.githubusercontent.com` there. With a repository set, it
+fetches the directory only when you click, takes file URLs only from that pinned repository, and
+routes only links of the exact shape `larimar://plugin/<plugin-id>`; other `larimar://` shapes are
+ignored, and the id must exist in the fetched registry. Rust verifies both registry hashes before
+the atomic install. An update shows which permissions and
 hosts are new and which are no longer asked for, and changed code always needs fresh approval
 before it runs. A directory entry that needs a newer Moldavite stays listed with the reason instead
 of an Install button.
@@ -75,7 +72,7 @@ Before anything is written, Moldavite checks the package:
 - Links (symlinks) are refused rather than followed, and a package holding more than one plugin is
   refused.
 
-The confirmation warns that the plugin did not come from the reviewed directory and shows the
+The confirmation warns that the plugin came from a file, not a registry, and shows the
 SHA-256 of `plugin.js`, so you can compare it with what the author published. The plugin is
 installed turned off, into `.plugins/<id>/` of the active Forge. If a plugin with the same id is
 already installed, the confirmation says so and replaces it only when you choose **Update** or
@@ -87,10 +84,7 @@ Copying a folder into `<Forge>/.plugins/` by hand still works for development: r
 ## Quick start
 
 To start from working code, install the **Example Plugin** (`moldavite-example`: a timestamp
-command and a word count). It is in the community directory, so **Settings → Plugins → Browse
-community plugins** or its **Install in Moldavite** link in the
-[website directory](https://moldavite.dev/plugins#directory) installs it, and its source is in this
-repository under
+command and a word count) with **Install from folder…**. Its source is in this repository under
 [`src-tauri/example-plugin/moldavite-example/`](../src-tauri/example-plugin/moldavite-example/).
 Copy that folder, rename it and change the manifest `id` to make it your own. It declares API v1,
 which still runs; set `apiVersion` to 2 before you use the v2 calls below.
@@ -113,9 +107,7 @@ my-plugin/
    menu.
 
 After you edit the files, install the folder again (or reopen Settings if you copied it in): the
-changed files need your approval again before the plugin runs. The
-[moldavite-plugins](https://github.com/mauropereiira/moldavite-plugins) repository has a starter
-template and a validator you can run before sharing a plugin.
+changed files need your approval again before the plugin runs.
 
 There is no required package manager or build step. A dependency-free
 `plugin.js` works as written. If you bundle dependencies, distribute the final
@@ -634,31 +626,12 @@ client ID, and the reference plugin intentionally does not embed or fake one.
   `manifest.json`, the final self-contained `plugin.js`, and a README, or a
   `.zip` of that folder. People install it with **Install from .zip…** or
   **Install from folder…**.
-- To list it in the community directory, open a pull request against
-  [moldavite-plugins](https://github.com/mauropereiira/moldavite-plugins). Its
-  `CONTRIBUTING.md` walks through the whole process for people, and its
-  `AGENTS.md` gives the same rules to AI coding agents. In short: copy
-  `template/` to `plugins/<id>/`, run `npm run check` (the validator and a
-  sandbox smoke test, Node 20 or later, no dependencies), run
-  `npm run registry -- <id>` to write the entry and both SHA-256 hashes into
-  `registry.json`, and open the pull request.
-- Every pull request runs two automatic checks with a read-only token and no
-  secrets. They are a baseline, not the review: nothing is published until the
-  maintainer has read the code and approved the pull request.
+- Larimar has no community directory yet, so there is nowhere to list a plugin.
 - Document every external service, exact manifest host, runtime-host reason,
   credential key, destructive action, and publishing action. Keep permissions
   minimal, and submit readable source rather than minified code.
-- Users select **Settings → Plugins → Browse community plugins**, or click a
-  website **Install in Moldavite** link, to fetch the directory explicitly;
-  Moldavite never checks it at startup. Website links contain only the validated
-  registry id and always stop at a permission-visible confirmation. The app
-  constructs file URLs only inside the pinned registry repository, and Rust
-  verifies the registry hashes before the shared staged/atomic installer writes
-  either file.
-- Versions follow semantic versioning. To update, submit the new files,
-  hashes, metadata, and a higher `version` together; the directory's checks
-  refuse a changed plugin whose version did not go up. Installed users see an
-  Update action that lists new permissions and hosts, and any byte change
+- Versions follow semantic versioning. Installing a changed copy over an
+  installed one lists new permissions and hosts, and any byte change
   invalidates the content-hash grant and requires fresh consent.
 - Successful community and bundled installs open **About this plugin** with the
   manifest instructions. Installation never enables a plugin; enable state and

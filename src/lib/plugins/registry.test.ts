@@ -2,14 +2,18 @@
 import { describe, expect, it } from 'vitest';
 import type { PluginInfo } from './types';
 import {
-  COMMUNITY_PLUGIN_RAW_BASE,
+  COMMUNITY_REGISTRY_REPO,
   communityIncompatibility,
   communityInstallState,
   communityPluginFileUrl,
   communityPluginSourceUrl,
+  communityRegistryUrl,
+  communityReportUrl,
   parseCommunityRegistry,
   type CommunityPlugin,
 } from './registry';
+
+const REPO = 'example/plugins';
 
 const HASH_A = 'a'.repeat(64);
 const HASH_B = 'b'.repeat(64);
@@ -70,11 +74,21 @@ describe('parseCommunityRegistry', () => {
     );
   });
 
-  it('constructs downloads from the pinned base and validated id, never the registry path', () => {
+  it('constructs downloads from the pinned repository and validated id, never the registry path', () => {
     const plugin = parseOne({ path: 'plugins/safe-plugin/' });
-    expect(communityPluginFileUrl(plugin, 'plugin.js')).toBe(
-      `${COMMUNITY_PLUGIN_RAW_BASE}/safe-plugin/plugin.js`
+    expect(communityRegistryUrl(REPO)).toBe(
+      'https://raw.githubusercontent.com/example/plugins/main/registry.json'
     );
+    expect(communityPluginFileUrl(REPO, plugin, 'plugin.js')).toBe(
+      'https://raw.githubusercontent.com/example/plugins/main/plugins/safe-plugin/plugin.js'
+    );
+  });
+});
+
+describe('the registry source', () => {
+  // Larimar has no registry of its own yet, and must not fall back to upstream's.
+  it('is unset until Larimar publishes one', () => {
+    expect(COMMUNITY_REGISTRY_REPO).toBeNull();
   });
 });
 
@@ -106,9 +120,12 @@ describe('directory entries this app cannot run', () => {
     expect(parsed.rejectedEntries).toBe(5);
   });
 
-  it('links to the reviewed source in the pinned repository', () => {
-    expect(communityPluginSourceUrl(parseOne())).toBe(
-      'https://github.com/mauropereiira/moldavite-plugins/tree/main/plugins/safe-plugin'
+  it('links to the source and the report form in the pinned repository', () => {
+    expect(communityPluginSourceUrl(REPO, parseOne())).toBe(
+      'https://github.com/example/plugins/tree/main/plugins/safe-plugin'
+    );
+    expect(communityReportUrl(REPO, parseOne())).toBe(
+      'https://github.com/example/plugins/issues/new?template=report-plugin.yml&title=Report%3A%20safe-plugin'
     );
   });
 });

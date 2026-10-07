@@ -16,6 +16,14 @@ vi.mock('@/lib/plugins/importPackage', () => ({
   installImportCandidate: vi.fn(),
 }));
 vi.mock('../BrowserClipperCard', () => ({ BrowserClipperCard: () => null }));
+// Larimar ships with no registry; the directory tests below stand one in.
+const registry = vi.hoisted(() => ({ repo: 'example/plugins' as string | null }));
+vi.mock('@/lib/plugins/registry', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/plugins/registry')>()),
+  get COMMUNITY_REGISTRY_REPO() {
+    return registry.repo;
+  },
+}));
 
 import { listPlugins, reconcilePlugins, setPluginsPaused } from '@/lib/plugins/host';
 import { safeInvoke } from '@/lib/ipc';
@@ -26,6 +34,7 @@ import {
 } from '@/lib/plugins/importPackage';
 import { usePluginStore } from '@/stores/pluginStore';
 import { PLUGINS_RUNNING, usePluginSafeModeStore } from '@/stores/pluginSafeModeStore';
+import { usePluginInstallStore } from '@/stores';
 import { PluginsSection } from './PluginsSection';
 
 const HASH = 'h'.repeat(64);
@@ -80,6 +89,7 @@ function setInstalled(list: PluginInfo[]) {
 
 describe('PluginsSection', () => {
   beforeEach(() => {
+    registry.repo = 'example/plugins';
     vi.mocked(safeInvoke).mockReset().mockResolvedValue(undefined);
     usePluginStore.setState({ grants: {} });
     usePluginSafeModeStore.setState({ status: PLUGINS_RUNNING });
@@ -94,6 +104,31 @@ describe('PluginsSection', () => {
 
     expect(screen.getByRole('button', { name: /Build your own/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /example plugin/i })).not.toBeInTheDocument();
+  });
+
+  it('says there is no Larimar registry yet without making a request', async () => {
+    registry.repo = null;
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    render(<PluginsSection />);
+    await screen.findByText('Word Count');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Browse community plugins' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('No Larimar plugin registry yet');
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('answers an install link with no registry without making a request', async () => {
+    registry.repo = null;
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    usePluginInstallStore.getState().request('word-count');
+    render(<PluginsSection />);
+
+    expect(await screen.findByRole('status')).toHaveTextContent('No Larimar plugin registry yet');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('keeps installed plugins manageable when the directory is unreachable', async () => {
@@ -182,7 +217,7 @@ describe('PluginsSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Install from .zip…' }));
     const dialog = await screen.findByRole('dialog', { name: 'Install plugin from a file?' });
-    expect(within(dialog).getByText(/not the reviewed community directory/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/comes from a file on your computer/)).toBeInTheDocument();
     expect(installImportCandidate).not.toHaveBeenCalled();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Install' }));

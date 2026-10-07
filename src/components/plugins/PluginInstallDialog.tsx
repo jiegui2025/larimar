@@ -238,8 +238,8 @@ export function PluginInstallDialog({
               }}
             >
               <p>
-                This plugin comes from a file on your computer, not the reviewed community
-                directory. Only install it if you trust whoever made it.
+                This plugin comes from a file on your computer, not a plugin registry. Only install
+                it if you trust whoever made it.
               </p>
               <p>
                 Installing doesn&apos;t turn it on: you&apos;ll review and approve its permissions
@@ -260,10 +260,9 @@ export function PluginInstallDialog({
                 color: 'var(--text-secondary)',
               }}
             >
-              Plugins are listed only after the Moldavite maintainer reviews them, which lowers the
-              risk but isn&apos;t a guarantee. Moldavite downloads only the listed files and checks
-              both SHA-256 hashes. Installing doesn&apos;t turn it on: you&apos;ll review and
-              approve its permissions first.
+              Only the listed files are downloaded, and both SHA-256 hashes are checked. A listing
+              isn&apos;t a review: only install it if you trust whoever made it. Installing
+              doesn&apos;t turn it on: you&apos;ll review and approve its permissions first.
               {replacing && ' Changed code or permissions always need your approval again.'}
             </div>
           )}
