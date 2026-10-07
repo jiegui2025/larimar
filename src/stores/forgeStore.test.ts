@@ -31,7 +31,7 @@ describe('synced Forge selection', () => {
                 isSynced: false,
               },
               {
-                id: 'icloud://moldavite',
+                id: 'icloud://larimar',
                 name: 'Synced Forge',
                 path: '/cloud',
                 isActive: true,
@@ -42,8 +42,8 @@ describe('synced Forge selection', () => {
       )
     );
     await useForgeStore.getState().loadForges();
-    expect(useForgeStore.getState().active).toBe('icloud://moldavite');
-    expect(getActiveForgeName()).toBe('icloud://moldavite');
+    expect(useForgeStore.getState().active).toBe('icloud://larimar');
+    expect(getActiveForgeName()).toBe('icloud://larimar');
   });
 
   it('keeps the current Forge selected when iCloud cannot connect', async () => {

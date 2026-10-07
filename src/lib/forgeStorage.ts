@@ -143,7 +143,7 @@ export const forgeNamespacedStorageWithLegacyFallback: StateStorage = {
   removeItem: forgeNamespacedStorage.removeItem,
 };
 
-/** Base keys never contain a colon, so the first one is the separator, even for `icloud://moldavite`. */
+/** Base keys never contain a colon, so the first one is the separator, even for `icloud://larimar`. */
 function forgeKeys(forge: string): string[] {
   const keys: string[] = [];
   try {

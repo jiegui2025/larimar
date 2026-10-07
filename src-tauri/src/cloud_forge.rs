@@ -19,7 +19,7 @@ use models::{CloudItem, DownloadState};
 #[cfg(target_os = "macos")]
 use crate::file_coordination as native;
 
-pub(crate) const FORGE_ID: &str = "icloud://moldavite";
+pub(crate) const FORGE_ID: &str = "icloud://larimar";
 /// The frontend recognises this exact text (`NOT_DOWNLOADED_MESSAGE` in
 /// `src/lib/cloudNotes.ts`), and the native layer returns it too.
 pub(crate) const NOT_DOWNLOADED: &str =

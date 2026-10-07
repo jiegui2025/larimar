@@ -39,8 +39,8 @@ const EXPIRY_MARGIN: Duration = Duration::from_secs(60);
 /// enough that consent feels instant, long enough not to spin a core.
 const ACCEPT_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
-pub const CLIENT_ID: Option<&str> = option_env!("MOLDAVITE_GOOGLE_CLIENT_ID");
-pub const CLIENT_SECRET: Option<&str> = option_env!("MOLDAVITE_GOOGLE_CLIENT_SECRET");
+pub const CLIENT_ID: Option<&str> = option_env!("LARIMAR_GOOGLE_CLIENT_ID");
+pub const CLIENT_SECRET: Option<&str> = option_env!("LARIMAR_GOOGLE_CLIENT_SECRET");
 
 struct OAuthClient {
     id: &'static str,

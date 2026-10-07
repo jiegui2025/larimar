@@ -72,7 +72,7 @@ beforeEach(() => {
   invokeMock.mockReset();
   initializeNotesMock.mockClear();
   localStorage.clear();
-  localStorage.setItem('__moldavite_active_forge', 'icloud://moldavite');
+  localStorage.setItem('__moldavite_active_forge', 'icloud://larimar');
 });
 
 describe('launching on the synced Forge', () => {

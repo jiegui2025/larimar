@@ -13,7 +13,7 @@ import { safeInvoke } from './ipc';
 import { getActiveForgeName } from './forgeStorage';
 
 /** Must match `FORGE_ID` in `src-tauri/src/cloud_forge.rs`. */
-export const SYNCED_FORGE_ID = 'icloud://moldavite';
+export const SYNCED_FORGE_ID = 'icloud://larimar';
 
 export type ForgeReadinessStatus = 'checking' | 'ready' | 'unavailable';
 

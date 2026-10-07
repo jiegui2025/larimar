@@ -6,7 +6,7 @@ vi.mock('@/lib/fileSystem', () => ({ openForgeInFinder: vi.fn().mockResolvedValu
 
 const state = vi.hoisted(() => ({
   forges: [
-    { id: 'icloud://moldavite', name: 'Synced Forge', isSynced: true, isActive: false, path: '' },
+    { id: 'icloud://larimar', name: 'Synced Forge', isSynced: true, isActive: false, path: '' },
   ],
   loadForges: vi.fn().mockResolvedValue(undefined),
   setSyncedForge: vi.fn(),

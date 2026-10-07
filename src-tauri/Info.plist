@@ -10,12 +10,12 @@
 	<string>Moldavite needs access to your calendar to display your events in the timeline.</string>
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.app.moldavite</key>
+		<key>iCloud.app.larimar</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<true/>
 			<key>NSUbiquitousContainerName</key>
-			<string>Moldavite</string>
+			<string>Larimar</string>
 			<key>NSUbiquitousContainerSupportedFolderLevels</key>
 			<string>Any</string>
 		</dict>

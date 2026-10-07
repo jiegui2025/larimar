@@ -37,8 +37,9 @@ pub(crate) async fn open_support_page(
     page: SupportPage,
 ) -> Result<(), String> {
     let url = match page {
-        SupportPage::Privacy => "https://moldavite.dev/privacy",
-        SupportPage::Support => "https://github.com/mauropereiira/Moldavite/issues",
+        // Larimar has no privacy policy page yet; the README has a Privacy section.
+        SupportPage::Privacy => "https://github.com/jiegui2025/larimar#privacy",
+        SupportPage::Support => "https://github.com/jiegui2025/larimar/issues",
     };
     open_external_link(app, url.to_string()).await
 }
