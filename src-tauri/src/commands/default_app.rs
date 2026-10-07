@@ -427,13 +427,13 @@ mod linux_tests {
         for (mime, extra) in [
             ("text/markdown;", "NoDisplay=true"),
             ("text/markdown;", "Hidden=true"),
-            ("x-scheme-handler/moldavite;", ""),
+            ("x-scheme-handler/larimar;", ""),
         ] {
             let contents = format!(
                 "[Desktop Entry]\nExec={} %u\nMimeType={mime}\n{extra}\n",
                 fx.exe().display()
             );
-            fs::write(fx.path("user-apps/moldavite-handler.desktop"), contents).unwrap();
+            fs::write(fx.path("user-apps/larimar-handler.desktop"), contents).unwrap();
             assert_eq!(
                 find_desktop_id(&fx.app_dirs(), &fx.exe(), &[]),
                 None,

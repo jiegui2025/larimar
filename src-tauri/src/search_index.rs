@@ -12,7 +12,7 @@
 //! A SQLite database is written in place with a WAL sidecar, which is the
 //! documented way to corrupt a database inside Dropbox or iCloud. The file
 //! therefore lives outside the Forge, at
-//! `<data_dir>/Moldavite/index/<sha256 of the canonical Forge path>/search.sqlite`,
+//! `<data_dir>/Larimar/index/<sha256 of the canonical Forge path>/search.sqlite`,
 //! next to the semantic model cache. A renamed or moved Forge hashes
 //! differently and simply rebuilds; the orphan is harmless and
 //! [`delete_for`] removes it with its Forge.
@@ -146,7 +146,7 @@ pub(crate) struct SearchIndexStatus {
 fn default_index_root() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(std::env::temp_dir)
-        .join("Moldavite")
+        .join(crate::paths::APP_DIR_NAME)
         .join("index")
 }
 
@@ -1097,7 +1097,7 @@ mod tests {
     fn default_index_root_sits_in_the_app_data_dir_not_a_forge() {
         let root = default_index_root();
         assert!(
-            root.ends_with(Path::new("Moldavite").join("index")),
+            root.ends_with(Path::new("Larimar").join("index")),
             "{root:?}"
         );
     }

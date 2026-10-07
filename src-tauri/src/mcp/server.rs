@@ -142,7 +142,7 @@ fn handle_request(context: &ToolContext, request: Value) -> Option<Value> {
                     "protocolVersion": protocol,
                     "capabilities": { "tools": {} },
                     "serverInfo": {
-                        "name": "moldavite",
+                        "name": "larimar",
                         "version": env!("CARGO_PKG_VERSION")
                     }
                 }),
@@ -275,6 +275,7 @@ mod tests {
         let responses = run(input, ToolContext::new(root.clone(), true, false));
         assert_eq!(responses.len(), 9);
         assert_eq!(responses[0]["result"]["protocolVersion"], "2024-11-05");
+        assert_eq!(responses[0]["result"]["serverInfo"]["name"], "larimar");
         assert_eq!(responses[1]["result"]["tools"].as_array().unwrap().len(), 7);
         for response in &responses[2..] {
             assert_ne!(response["result"]["isError"], true);

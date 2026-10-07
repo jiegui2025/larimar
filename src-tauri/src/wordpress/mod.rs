@@ -70,7 +70,7 @@ pub(crate) fn wordpress_status() -> WordPressStatus {
 }
 
 /// Open WordPress.com in the system browser. Completion arrives later, over
-/// the `moldavite://` callback, and is reported on the `wordpress:auth` event.
+/// the `larimar://` callback, and is reported on the `wordpress:auth` event.
 #[tauri::command]
 pub(crate) async fn wordpress_connect<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
     let url = oauth::begin(&app)?;

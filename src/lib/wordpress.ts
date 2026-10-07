@@ -2,7 +2,7 @@
  * Typed IPC for WordPress.com publishing.
  *
  * The authorization code never reaches this layer: `connect` only opens the
- * browser, and the exchange happens in Rust off the `moldavite://` callback.
+ * browser, and the exchange happens in Rust off the `larimar://` callback.
  * Completion arrives as a `wordpress:auth` event.
  */
 

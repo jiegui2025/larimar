@@ -33,15 +33,15 @@
         "enable": true,
         "scope": {
           "allow": [
-            "$DOCUMENT/Moldavite/**"
+            "$DOCUMENT/Larimar/**"
           ],
           "deny": [
-            "$DOCUMENT/Moldavite/**/.plugins/**",
-            "$DOCUMENT/Moldavite/**/.trash/**",
-            "$DOCUMENT/Moldavite/**/.index/**",
-            "$DOCUMENT/Moldavite/**/*.md",
-            "$DOCUMENT/Moldavite/**/*.locked",
-            "$DOCUMENT/Moldavite/**/*.json"
+            "$DOCUMENT/Larimar/**/.plugins/**",
+            "$DOCUMENT/Larimar/**/.trash/**",
+            "$DOCUMENT/Larimar/**/.index/**",
+            "$DOCUMENT/Larimar/**/*.md",
+            "$DOCUMENT/Larimar/**/*.locked",
+            "$DOCUMENT/Larimar/**/*.json"
           ]
         }
       }
@@ -54,7 +54,7 @@
     "deep-link": {
       "desktop": {
         "schemes": [
-          "moldavite"
+          "larimar"
         ]
       }
     },

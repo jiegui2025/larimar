@@ -33,7 +33,7 @@ interface NoteDeepLinkRequest {
   path: string;
 }
 
-/** `moldavite://today`: what the home screen widget opens. */
+/** `larimar://today`: what the home screen widget opens. */
 interface TodayDeepLinkRequest {
   kind: 'today';
 }
@@ -68,7 +68,7 @@ export function noteDeepLink(
   } else {
     reference = note.id.startsWith('notes/') ? note.id.slice('notes/'.length) : note.id;
   }
-  return `moldavite://note/${encodeURIComponent(reference)}`;
+  return `larimar://note/${encodeURIComponent(reference)}`;
 }
 
 /** Route only backend-validated plugin ids into Settings; fail closed otherwise. */

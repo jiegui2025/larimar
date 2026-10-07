@@ -423,7 +423,7 @@ mod tests {
         for url in [
             "file:///etc/passwd",
             "javascript:alert(1)",
-            "moldavite://today",
+            "larimar://today",
             "tel:+15551234567",
             "relative/path",
             "https://",

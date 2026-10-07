@@ -6,7 +6,7 @@
 //! 384-dimensional ONNX embedding models powered by `fastembed`. The selected
 //! model is downloaded from Hugging Face exactly once, and only after the user explicitly enables the feature
 //! (`semantic_set_enabled`). Model files are cached in the app data dir
-//! (`~/Library/Application Support/Moldavite/models` on macOS, `%APPDATA%\\Moldavite\\models`
+//! (`~/Library/Application Support/Larimar/models` on macOS, `%APPDATA%\\Larimar\\models`
 //! on Windows), never inside a vault.
 //! At query time no data ever leaves the machine.
 //!
@@ -195,7 +195,7 @@ impl Embedder for FastEmbedder {
 pub(crate) fn model_cache_dir(model_id: &str) -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(std::env::temp_dir)
-        .join("Moldavite")
+        .join(crate::paths::APP_DIR_NAME)
         .join("models")
         .join(model_id)
 }

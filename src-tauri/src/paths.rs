@@ -31,14 +31,21 @@ fn os_dir_or_fallback(primary: Option<PathBuf>, label: &str) -> PathBuf {
     })
 }
 
+/// The folder every per-user location of this app is named after: config,
+/// data (indexes, activity logs, models), the default Forges root under
+/// Documents and the Windows native-messaging hosts. It must differ from
+/// upstream's so an installed upstream app never shares any of them, and it
+/// must match the `$DOCUMENT/...` asset scope in tauri.conf.json.
+pub(crate) const APP_DIR_NAME: &str = "Larimar";
+
 pub(crate) fn get_config_path() -> PathBuf {
     os_dir_or_fallback(dirs::config_dir(), "Config directory")
-        .join("Moldavite")
+        .join(APP_DIR_NAME)
         .join("config.json")
 }
 
 pub(crate) fn get_default_notes_dir() -> PathBuf {
-    os_dir_or_fallback(dirs::document_dir(), "Documents directory").join("Moldavite")
+    os_dir_or_fallback(dirs::document_dir(), "Documents directory").join(APP_DIR_NAME)
 }
 
 /// Default name for the Forge that legacy single-Forge users get migrated
@@ -62,7 +69,7 @@ pub(crate) fn get_forges_root() -> PathBuf {
             return parent.to_path_buf();
         }
     }
-    os_dir_or_fallback(dirs::document_dir(), "Documents directory").join("Moldavite")
+    get_default_notes_dir()
 }
 
 /// Returns the active Forge name (a directory under `forges_root`).
@@ -133,7 +140,7 @@ pub(crate) fn get_images_dir() -> Result<PathBuf, String> {
 /// Let the webview load images from `forge_root`'s images directory.
 ///
 /// `tauri.conf.json` can only express a static asset scope, and it names
-/// `$DOCUMENT/Moldavite` because that is where Forges live by default. A
+/// `$DOCUMENT/Larimar` because that is where Forges live by default. A
 /// `forges_root` pointed elsewhere, or the iCloud Forge under Mobile Documents,
 /// falls outside it, and every embedded image 404s at the asset protocol. The
 /// active Forge therefore has to be granted at runtime, on startup and on every
@@ -219,7 +226,7 @@ fn app_binary_path_from(appimage: Option<OsString>, current_exe: PathBuf) -> Pat
 
 #[cfg(test)]
 mod tests {
-    /// The static scope in tauri.conf.json only names `$DOCUMENT/Moldavite`.
+    /// The static scope in tauri.conf.json only names `$DOCUMENT/Larimar`.
     /// A Forge anywhere else, including the iCloud container, must still be
     /// able to serve its images, and must not leak anything but its images.
     #[test]
@@ -257,6 +264,27 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn config_and_default_forges_root_use_larimars_own_folder() {
+        assert_eq!(APP_DIR_NAME, "Larimar");
+        assert!(get_config_path().ends_with(Path::new("Larimar").join("config.json")));
+        assert!(get_default_notes_dir().ends_with("Larimar"));
+    }
+
+    #[test]
+    fn the_static_asset_scope_names_the_default_forges_root() {
+        let config: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let scope = &config["app"]["security"]["assetProtocol"]["scope"];
+        let root = format!("$DOCUMENT/{APP_DIR_NAME}/");
+        assert_eq!(scope["allow"], serde_json::json!([format!("{root}**")]));
+        let deny = scope["deny"].as_array().unwrap();
+        assert!(!deny.is_empty());
+        for pattern in deny {
+            assert!(pattern.as_str().unwrap().starts_with(&root), "{pattern}");
+        }
+    }
 
     #[test]
     fn os_dir_or_fallback_keeps_the_happy_path_identical() {
